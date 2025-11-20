@@ -71,8 +71,8 @@ export const lightTheme = {
 };
 
 export const darkTheme = {
-  background: ['#0d1117', '#161b22', '#21262d'],
-  containerBg: '#0d1117',
+  background: ['#1a1f2e', '#252d3d', '#2d3748'],
+  containerBg: '#1a1f2e',
   cardBg: 'rgba(22, 27, 34, 0.9)',
   cardBorder: 'rgba(48, 161, 224, 0.25)',
   text: '#ffffff',
