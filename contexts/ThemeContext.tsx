@@ -71,15 +71,15 @@ export const lightTheme = {
 };
 
 export const darkTheme = {
-  background: ['#0f172a', '#1e293b', '#334155'],
-  containerBg: '#0f172a',
-  cardBg: 'rgba(30, 41, 59, 0.8)',
-  cardBorder: 'rgba(148, 163, 184, 0.2)',
-  text: '#f1f5f9',
-  textSecondary: '#cbd5e1',
-  textTertiary: '#94a3b8',
-  iconButton: 'rgba(30, 41, 59, 0.8)',
-  iconButtonBorder: 'rgba(148, 163, 184, 0.3)',
-  navBg: 'rgba(30, 41, 59, 0.95)',
-  navInactive: 'rgba(51, 65, 85, 0.8)',
+  background: ['#1a1a1a', '#252525', '#303030'],
+  containerBg: '#1a1a1a',
+  cardBg: 'rgba(40, 40, 40, 0.8)',
+  cardBorder: 'rgba(100, 100, 100, 0.2)',
+  text: '#f5f5f5',
+  textSecondary: '#d4d4d4',
+  textTertiary: '#a3a3a3',
+  iconButton: 'rgba(40, 40, 40, 0.8)',
+  iconButtonBorder: 'rgba(115, 115, 115, 0.3)',
+  navBg: 'rgba(40, 40, 40, 0.95)',
+  navInactive: 'rgba(60, 60, 60, 0.8)',
 };
