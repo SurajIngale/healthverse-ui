@@ -2,9 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { Users, Calendar, Clock, TrendingUp, Bell, Settings, Home, Search, User } from 'lucide-react-native';
+import { Users, Calendar, Clock, TrendingUp, Bell, Settings, Home, Search, User, Sun, Moon } from 'lucide-react-native';
+import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
 
 export default function DoctorHomeScreen() {
+  const { isDark, toggleTheme } = useTheme();
+  const colors = isDark ? darkTheme : lightTheme;
+
   const stats = [
     { label: "Today's Patients", value: '12', icon: Users, color: '#10b981' },
     { label: 'Appointments', value: '18', icon: Calendar, color: '#3b82f6' },
@@ -18,9 +22,9 @@ export default function DoctorHomeScreen() {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.containerBg }]}>
       <LinearGradient
-        colors={['#E0F2FF', '#F0F9FF', '#FFFFFF']}
+        colors={colors.background}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -29,15 +33,22 @@ export default function DoctorHomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Good Morning</Text>
-            <Text style={styles.username}>Dr. Sarah Johnson</Text>
+            <Text style={[styles.greeting, { color: colors.textSecondary }]}>Good Morning</Text>
+            <Text style={[styles.username, { color: colors.text }]}>Dr. Sarah Johnson</Text>
           </View>
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Bell size={22} color="#475569" strokeWidth={2} />
+            <TouchableOpacity onPress={toggleTheme} style={[styles.iconButton, { backgroundColor: colors.iconButton, borderColor: colors.iconButtonBorder }]}>
+              {isDark ? (
+                <Sun size={22} color={colors.textSecondary} strokeWidth={2} />
+              ) : (
+                <Moon size={22} color={colors.textSecondary} strokeWidth={2} />
+              )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
-              <Settings size={22} color="#475569" strokeWidth={2} />
+            <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.iconButton, borderColor: colors.iconButtonBorder }]}>
+              <Bell size={22} color={colors.textSecondary} strokeWidth={2} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.iconButton, borderColor: colors.iconButtonBorder }]}>
+              <Settings size={22} color={colors.textSecondary} strokeWidth={2} />
             </TouchableOpacity>
           </View>
         </View>
@@ -56,13 +67,13 @@ export default function DoctorHomeScreen() {
                 from={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 300 + index * 100, type: 'spring' }}
-                style={styles.statCard}
+                style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
               >
                 <View style={[styles.statIcon, { backgroundColor: `${stat.color}15` }]}>
                   <Icon size={24} color={stat.color} strokeWidth={2} />
                 </View>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>{stat.value}</Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>{stat.label}</Text>
               </MotiView>
             );
           })}
@@ -75,7 +86,7 @@ export default function DoctorHomeScreen() {
           style={styles.section}
         >
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Schedule</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Schedule</Text>
             <TouchableOpacity>
               <Text style={styles.sectionLink}>View All</Text>
             </TouchableOpacity>
@@ -87,19 +98,19 @@ export default function DoctorHomeScreen() {
               from={{ opacity: 0, translateX: -20 }}
               animate={{ opacity: 1, translateX: 0 }}
               transition={{ delay: 700 + index * 100, type: 'spring' }}
-              style={styles.appointmentCard}
+              style={[styles.appointmentCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
             >
               <View style={styles.appointmentLeft}>
                 <View style={styles.patientAvatar}>
                   <Text style={styles.avatarText}>{appointment.patient.charAt(0)}</Text>
                 </View>
                 <View style={styles.appointmentInfo}>
-                  <Text style={styles.patientName}>{appointment.patient}</Text>
+                  <Text style={[styles.patientName, { color: colors.text }]}>{appointment.patient}</Text>
                   <View style={styles.appointmentMeta}>
                     <Clock size={14} color="#94a3b8" strokeWidth={2} />
-                    <Text style={styles.appointmentTime}>{appointment.time}</Text>
-                    <View style={styles.separator} />
-                    <Text style={styles.appointmentType}>{appointment.type}</Text>
+                    <Text style={[styles.appointmentTime, { color: colors.textTertiary }]}>{appointment.time}</Text>
+                    <View style={[styles.separator, { backgroundColor: colors.textSecondary }]} />
+                    <Text style={[styles.appointmentType, { color: colors.textTertiary }]}>{appointment.type}</Text>
                   </View>
                 </View>
               </View>
@@ -119,33 +130,33 @@ export default function DoctorHomeScreen() {
           from={{ opacity: 0, translateY: 20 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ delay: 1000, type: 'spring' }}
-          style={styles.performanceCard}
+          style={[styles.performanceCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
         >
           <View style={styles.performanceHeader}>
-            <Text style={styles.performanceTitle}>This Week's Performance</Text>
+            <Text style={[styles.performanceTitle, { color: colors.text }]}>This Week's Performance</Text>
             <TrendingUp size={20} color="#10b981" strokeWidth={2} />
           </View>
           <View style={styles.performanceStats}>
             <View style={styles.performanceStat}>
               <Text style={styles.performanceValue}>48</Text>
-              <Text style={styles.performanceLabel}>Patients Treated</Text>
+              <Text style={[styles.performanceLabel, { color: colors.textTertiary }]}>Patients Treated</Text>
             </View>
             <View style={styles.performanceDivider} />
             <View style={styles.performanceStat}>
               <Text style={styles.performanceValue}>4.8</Text>
-              <Text style={styles.performanceLabel}>Avg. Rating</Text>
+              <Text style={[styles.performanceLabel, { color: colors.textTertiary }]}>Avg. Rating</Text>
             </View>
             <View style={styles.performanceDivider} />
             <View style={styles.performanceStat}>
               <Text style={styles.performanceValue}>92%</Text>
-              <Text style={styles.performanceLabel}>On-Time Rate</Text>
+              <Text style={[styles.performanceLabel, { color: colors.textTertiary }]}>On-Time Rate</Text>
             </View>
           </View>
         </MotiView>
       </ScrollView>
 
       <View style={styles.bottomNav}>
-        <View style={styles.navContainer}>
+        <View style={[styles.navContainer, { backgroundColor: colors.navBg, borderColor: colors.iconButtonBorder }]}>
           <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
             <View style={[styles.navButtonInner, styles.navButtonActive]}>
               <Home size={24} color="#ffffff" strokeWidth={2} />
@@ -153,20 +164,20 @@ export default function DoctorHomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
-            <View style={styles.navButtonInner}>
-              <Search size={24} color="#64748b" strokeWidth={2} />
+            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
+              <Search size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
-            <View style={styles.navButtonInner}>
-              <Calendar size={24} color="#64748b" strokeWidth={2} />
+            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
+              <Calendar size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
-            <View style={styles.navButtonInner}>
-              <User size={24} color="#64748b" strokeWidth={2} />
+            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
+              <User size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
           </TouchableOpacity>
         </View>

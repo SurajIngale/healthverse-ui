@@ -2,9 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { Heart, Calendar, FileText, Activity, Bell, Settings, Home, Search, User } from 'lucide-react-native';
+import { Heart, Calendar, FileText, Activity, Bell, Settings, Home, Search, User, Sun, Moon } from 'lucide-react-native';
+import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
 
 export default function PatientHomeScreen() {
+  const { isDark, toggleTheme } = useTheme();
+  const colors = isDark ? darkTheme : lightTheme;
+
   const stats = [
     { label: 'Appointments', value: '3', icon: Calendar, color: '#3b82f6' },
     { label: 'Reports', value: '12', icon: FileText, color: '#10b981' },
@@ -17,9 +21,9 @@ export default function PatientHomeScreen() {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.containerBg }]}>
       <LinearGradient
-        colors={['#E0F2FF', '#F0F9FF', '#FFFFFF']}
+        colors={colors.background}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -28,15 +32,22 @@ export default function PatientHomeScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Welcome back</Text>
-            <Text style={styles.username}>John Doe</Text>
+            <Text style={[styles.greeting, { color: colors.textSecondary }]}>Welcome back</Text>
+            <Text style={[styles.username, { color: colors.text }]}>John Doe</Text>
           </View>
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton}>
-              <Bell size={22} color="#475569" strokeWidth={2} />
+            <TouchableOpacity onPress={toggleTheme} style={[styles.iconButton, { backgroundColor: colors.iconButton, borderColor: colors.iconButtonBorder }]}>
+              {isDark ? (
+                <Sun size={22} color={colors.textSecondary} strokeWidth={2} />
+              ) : (
+                <Moon size={22} color={colors.textSecondary} strokeWidth={2} />
+              )}
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton}>
-              <Settings size={22} color="#475569" strokeWidth={2} />
+            <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.iconButton, borderColor: colors.iconButtonBorder }]}>
+              <Bell size={22} color={colors.textSecondary} strokeWidth={2} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.iconButton, { backgroundColor: colors.iconButton, borderColor: colors.iconButtonBorder }]}>
+              <Settings size={22} color={colors.textSecondary} strokeWidth={2} />
             </TouchableOpacity>
           </View>
         </View>
@@ -55,13 +66,13 @@ export default function PatientHomeScreen() {
                 from={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 300 + index * 100, type: 'spring' }}
-                style={styles.statCard}
+                style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
               >
                 <View style={[styles.statIcon, { backgroundColor: `${stat.color}15` }]}>
                   <Icon size={24} color={stat.color} strokeWidth={2} />
                 </View>
-                <Text style={styles.statValue}>{stat.value}</Text>
-                <Text style={styles.statLabel}>{stat.label}</Text>
+                <Text style={[styles.statValue, { color: colors.text }]}>{stat.value}</Text>
+                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>{stat.label}</Text>
               </MotiView>
             );
           })}
@@ -74,7 +85,7 @@ export default function PatientHomeScreen() {
           style={styles.section}
         >
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Appointments</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Upcoming Appointments</Text>
             <TouchableOpacity>
               <Text style={styles.sectionLink}>View All</Text>
             </TouchableOpacity>
@@ -86,18 +97,18 @@ export default function PatientHomeScreen() {
               from={{ opacity: 0, translateX: -20 }}
               animate={{ opacity: 1, translateX: 0 }}
               transition={{ delay: 700 + index * 100, type: 'spring' }}
-              style={styles.appointmentCard}
+              style={[styles.appointmentCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
             >
               <View style={styles.appointmentLeft}>
                 <View style={styles.doctorAvatar}>
                   <Text style={styles.avatarText}>{appointment.doctor.charAt(4)}</Text>
                 </View>
                 <View>
-                  <Text style={styles.doctorName}>{appointment.doctor}</Text>
-                  <Text style={styles.specialty}>{appointment.specialty}</Text>
+                  <Text style={[styles.doctorName, { color: colors.text }]}>{appointment.doctor}</Text>
+                  <Text style={[styles.specialty, { color: colors.textTertiary }]}>{appointment.specialty}</Text>
                 </View>
               </View>
-              <Text style={styles.appointmentDate}>{appointment.date}</Text>
+              <Text style={[styles.appointmentDate, { color: colors.textSecondary }]}>{appointment.date}</Text>
             </MotiView>
           ))}
         </MotiView>
@@ -108,7 +119,7 @@ export default function PatientHomeScreen() {
           transition={{ delay: 900, type: 'spring' }}
           style={styles.quickActions}
         >
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionButton}>
               <LinearGradient
@@ -138,7 +149,7 @@ export default function PatientHomeScreen() {
       </ScrollView>
 
       <View style={styles.bottomNav}>
-        <View style={styles.navContainer}>
+        <View style={[styles.navContainer, { backgroundColor: colors.navBg, borderColor: colors.iconButtonBorder }]}>
           <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
             <View style={[styles.navButtonInner, styles.navButtonActive]}>
               <Home size={24} color="#ffffff" strokeWidth={2} />
@@ -146,20 +157,20 @@ export default function PatientHomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
-            <View style={styles.navButtonInner}>
-              <Search size={24} color="#64748b" strokeWidth={2} />
+            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
+              <Search size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
-            <View style={styles.navButtonInner}>
-              <Calendar size={24} color="#64748b" strokeWidth={2} />
+            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
+              <Calendar size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
-            <View style={styles.navButtonInner}>
-              <User size={24} color="#64748b" strokeWidth={2} />
+            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
+              <User size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
           </TouchableOpacity>
         </View>
