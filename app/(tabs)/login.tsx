@@ -80,6 +80,10 @@ export default function LoginScreen() {
     }
   };
 
+  const handleGuestLogin = () => {
+    router.push('/(tabs)/patient-home');
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -119,97 +123,64 @@ export default function LoginScreen() {
           </MotiView>
 
           <MotiView
-            from={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: 'spring', delay: 200, damping: 15 }}
+            from={{ opacity: 0, translateY: 20 }}
+            animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: 'timing', delay: 200, duration: 500 }}
             style={styles.card}
           >
             <Text style={styles.label}>I am a...</Text>
             <View style={styles.rolesContainer}>
               {roles.map((role, index) => {
                 const Icon = role.icon;
-                const DecorIcon = role.decorIcon;
                 const isSelected = selectedRole === role.id;
-                const isCenter = index === 1;
 
                 return (
                   <MotiView
                     key={role.id}
-                    from={{ opacity: 0, scale: 0.8, rotateY: '45deg' }}
+                    from={{ opacity: 0, translateY: 30 }}
                     animate={{
                       opacity: 1,
-                      scale: isSelected ? 1.05 : isCenter ? 0.95 : 0.85,
-                      rotateY: '0deg',
-                      translateY: isSelected ? -8 : 0,
+                      translateY: 0,
+                      scale: isSelected ? 1 : 1,
                     }}
                     transition={{
-                      delay: 300 + index * 100,
-                      type: 'spring',
-                      damping: 12,
-                      stiffness: 100,
+                      delay: 300 + index * 80,
+                      type: 'timing',
+                      duration: 400,
                     }}
-                    style={[styles.roleWrapper, isCenter && styles.roleWrapperCenter]}
+                    style={styles.roleWrapper}
                   >
                     <TouchableOpacity
                       onPress={() => setSelectedRole(role.id)}
-                      activeOpacity={0.7}
+                      activeOpacity={0.85}
                       style={styles.roleButton}
                     >
                       <LinearGradient
                         colors={
                           isSelected
                             ? role.gradient
-                            : ['rgba(30, 41, 59, 0.6)', 'rgba(30, 41, 59, 0.4)']
+                            : ['rgba(30, 41, 59, 0.5)', 'rgba(30, 41, 59, 0.3)']
                         }
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={[styles.roleGradient, isSelected && styles.roleGradientSelected]}
                       >
-                        <MotiView
-                          animate={{
-                            scale: isSelected ? [1, 1.1, 1] : 1,
-                          }}
-                          transition={{
-                            type: 'timing',
-                            duration: 1000,
-                            loop: isSelected,
-                          }}
-                          style={styles.iconCircle}
-                        >
-                          <Icon
-                            size={28}
-                            color={isSelected ? '#ffffff' : '#94a3b8'}
-                            strokeWidth={2}
-                          />
-                        </MotiView>
-
-                        {isSelected && (
-                          <MotiView
-                            from={{ opacity: 0, scale: 0.5, rotate: '-180deg' }}
-                            animate={{ opacity: 0.15, scale: 1.2, rotate: '0deg' }}
-                            transition={{ type: 'spring', delay: 100 }}
-                            style={styles.decorIconWrapper}
-                          >
-                            <DecorIcon size={48} color="#ffffff" strokeWidth={1} />
-                          </MotiView>
-                        )}
-
-                        <View style={styles.roleInfo}>
+                        <View style={styles.roleContent}>
+                          <View style={styles.iconCircle}>
+                            <Icon
+                              size={20}
+                              color={isSelected ? '#ffffff' : '#94a3b8'}
+                              strokeWidth={2.5}
+                            />
+                          </View>
                           <Text
                             style={[
                               styles.roleText,
                               isSelected && styles.roleTextSelected,
                             ]}
+                            numberOfLines={1}
                           >
                             {role.label}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.roleDescription,
-                              isSelected && styles.roleDescriptionSelected,
-                            ]}
-                          >
-                            {role.description}
                           </Text>
                         </View>
 
@@ -217,12 +188,14 @@ export default function LoginScreen() {
                           <MotiView
                             from={{ scale: 0, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: 'spring', delay: 200 }}
+                            transition={{
+                              type: 'timing',
+                              duration: 300,
+                              delay: 100,
+                            }}
                             style={styles.checkmark}
                           >
-                            <View style={styles.checkmarkCircle}>
-                              <Text style={styles.checkmarkText}>✓</Text>
-                            </View>
+                            <View style={styles.checkmarkDot} />
                           </MotiView>
                         )}
                       </LinearGradient>
@@ -243,12 +216,14 @@ export default function LoginScreen() {
                 onChangeText={(text) => {
                   setPhone(text);
                   setError('');
+                  if (text.length === 10 && /^\d+$/.test(text)) {
+                    setTimeout(() => handleContinue(), 300);
+                  }
                 }}
                 keyboardType="phone-pad"
                 maxLength={10}
                 placeholder="Enter 10-digit number"
                 placeholderTextColor="#475569"
-                onSubmitEditing={handleContinue}
                 returnKeyType="done"
               />
             </View>
@@ -266,7 +241,7 @@ export default function LoginScreen() {
             <TouchableOpacity
               onPress={handleContinue}
               disabled={!isPhoneValid || loading}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               style={[styles.button, (!isPhoneValid || loading) && styles.buttonDisabled]}
             >
               <LinearGradient
@@ -282,12 +257,27 @@ export default function LoginScreen() {
                 )}
               </LinearGradient>
             </TouchableOpacity>
+
+            <MotiView
+              from={{ opacity: 0, translateY: 10 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: 'timing', delay: 500, duration: 400 }}
+              style={styles.guestContainer}
+            >
+              <TouchableOpacity
+                onPress={handleGuestLogin}
+                activeOpacity={0.7}
+                style={styles.guestButton}
+              >
+                <Text style={styles.guestText}>Continue as Guest</Text>
+              </TouchableOpacity>
+            </MotiView>
           </MotiView>
 
           <MotiView
             from={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 800 }}
+            transition={{ delay: 900, type: 'timing', duration: 500 }}
             style={styles.footer}
           >
             <Text style={styles.footerText}>
@@ -373,104 +363,62 @@ const styles = StyleSheet.create({
   },
   rolesContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 32,
-    paddingHorizontal: 4,
+    gap: 10,
+    marginBottom: 28,
   },
   roleWrapper: {
     flex: 1,
   },
-  roleWrapperCenter: {
-    zIndex: 1,
-  },
   roleButton: {
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
   roleGradient: {
-    padding: 16,
-    paddingVertical: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.1)',
-    minHeight: 140,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(148, 163, 184, 0.15)',
+    minHeight: 100,
     position: 'relative',
     overflow: 'hidden',
   },
   roleGradientSelected: {
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  roleContent: {
+    alignItems: 'center',
+    gap: 8,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
-    zIndex: 2,
-  },
-  decorIconWrapper: {
-    position: 'absolute',
-    top: -10,
-    right: -10,
-    zIndex: 0,
-  },
-  roleInfo: {
-    alignItems: 'center',
-    zIndex: 2,
   },
   roleText: {
-    fontSize: 15,
-    fontFamily: 'Inter-Bold',
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
     color: '#94a3b8',
-    marginBottom: 4,
   },
   roleTextSelected: {
     color: '#ffffff',
   },
-  roleDescription: {
-    fontSize: 11,
-    fontFamily: 'Inter-Regular',
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  roleDescriptionSelected: {
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
   checkmark: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 8,
+    right: 8,
     zIndex: 3,
   },
-  checkmarkCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  checkmarkText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Bold',
-    color: '#ffffff',
+  checkmarkDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ffffff',
   },
   divider: {
     height: 1,
@@ -515,21 +463,35 @@ const styles = StyleSheet.create({
   button: {
     borderRadius: 16,
     overflow: 'hidden',
-    marginTop: 8,
+    marginTop: 12,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   buttonGradient: {
-    paddingVertical: 18,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+  },
+  guestContainer: {
+    marginTop: 12,
+    alignItems: 'center',
+  },
+  guestButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  guestText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: '#3b82f6',
+    letterSpacing: 0.2,
   },
   footer: {
     alignItems: 'center',
