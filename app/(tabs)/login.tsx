@@ -128,7 +128,6 @@ export default function LoginScreen() {
             transition={{ type: 'timing', delay: 200, duration: 500 }}
             style={styles.card}
           >
-            <Text style={styles.label}>I am a...</Text>
             <View style={styles.rolesContainer}>
               {roles.map((role, index) => {
                 const Icon = role.icon;
