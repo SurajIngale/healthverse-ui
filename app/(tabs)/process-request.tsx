@@ -188,33 +188,51 @@ export default function ProcessRequestScreen() {
             <View style={[styles.iconBadge, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
               <Upload size={20} color="#3b82f6" strokeWidth={2} />
             </View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Upload Reports</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Upload Files</Text>
           </View>
 
-          <TouchableOpacity
-            onPress={handleFileUpload}
-            disabled={uploading}
-            style={styles.uploadButton}
-            activeOpacity={0.7}
-          >
-            <LinearGradient
-              colors={uploading ? ['#94a3b8', '#64748b'] : ['#3b82f6', '#2563eb']}
-              style={styles.uploadGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
+          <Text style={[styles.uploadSubtitle, { color: colors.textTertiary }]}>
+            Select and upload the files of your choice
+          </Text>
+
+          <View style={[styles.uploadZoneContainer, { borderColor: colors.cardBorder }]}>
+            <TouchableOpacity
+              onPress={handleFileUpload}
+              disabled={uploading}
+              style={[styles.uploadZone, { borderColor: colors.accent }]}
+              activeOpacity={0.7}
             >
-              <Upload size={20} color="#ffffff" strokeWidth={2} />
-              <Text style={styles.uploadButtonText}>
-                {uploading ? 'Uploading...' : 'Upload Report'}
+              <Upload size={32} color={colors.textTertiary} strokeWidth={1.5} />
+              <Text style={[styles.uploadZoneTitle, { color: colors.text }]}>
+                Choose a file or drag & drop it here
               </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <Text style={[styles.uploadZoneSubtitle, { color: colors.textTertiary }]}>
+                JPEG, PNG, PDF formats, up to 50MB
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleFileUpload}
+              disabled={uploading}
+              style={styles.browseButton}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={uploading ? ['#94a3b8', '#64748b'] : ['#3b82f6', '#2563eb']}
+                style={styles.browseGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.browseButtonText}>
+                  {uploading ? 'Uploading...' : 'Browse File'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
 
           {uploadedFiles.length > 0 && (
             <View style={styles.uploadedFilesContainer}>
-              <Text style={[styles.uploadedFilesTitle, { color: colors.textSecondary }]}>
-                Uploaded Files ({uploadedFiles.length})
-              </Text>
+              <View style={[styles.divider, { backgroundColor: colors.cardBorder }]} />
               {uploadedFiles.map((file) => (
                 <MotiView
                   key={file.id}
@@ -378,30 +396,63 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     flex: 1,
   },
-  uploadButton: {
+  uploadSubtitle: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    marginBottom: 16,
+    marginTop: -8,
+  },
+  uploadZoneContainer: {
     borderRadius: 12,
-    overflow: 'hidden',
+    padding: 16,
+    alignItems: 'center',
     marginBottom: 16,
   },
-  uploadGradient: {
-    flexDirection: 'row',
+  uploadZone: {
+    width: '100%',
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
+    marginBottom: 16,
   },
-  uploadButtonText: {
+  uploadZoneTitle: {
     fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    marginTop: 12,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  uploadZoneSubtitle: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+  },
+  browseButton: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    minWidth: 140,
+  },
+  browseGradient: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  browseButtonText: {
+    fontSize: 13,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
   },
   uploadedFilesContainer: {
-    marginTop: 8,
+    marginTop: 0,
   },
-  uploadedFilesTitle: {
-    fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: 12,
+  divider: {
+    height: 1,
+    marginBottom: 16,
   },
   fileItem: {
     flexDirection: 'row',
