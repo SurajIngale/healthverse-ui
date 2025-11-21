@@ -164,49 +164,66 @@ export default function TimelineScreen() {
         </TouchableOpacity>
 
         <View style={styles.timelineContainer}>
-          <View style={[styles.timelineLine, { backgroundColor: colors.cardBorder }]} />
-
           {events.map((event, index) => {
             const Icon = getEventIcon(event.type);
             const color = getEventColor(event.type);
+            const isLeft = index % 2 === 0;
             const isLast = index === events.length - 1;
 
             return (
-              <MotiView
-                key={event.id}
-                from={{ opacity: 0, translateX: -30, scale: 0.9 }}
-                animate={{ opacity: 1, translateX: 0, scale: 1 }}
-                transition={{ delay: 400 + index * 100, type: 'spring', damping: 15 }}
-                style={styles.timelineItem}
-              >
+              <View key={event.id}>
                 <MotiView
-                  from={{ scale: 0, rotate: '-180deg' }}
-                  animate={{ scale: 1, rotate: '0deg' }}
-                  transition={{ delay: 500 + index * 100, type: 'spring', damping: 12 }}
-                  style={[styles.timelineNode, { backgroundColor: color, borderColor: colors.containerBg }]}
+                  from={{ opacity: 0, translateX: isLeft ? -50 : 50, scale: 0.9 }}
+                  animate={{ opacity: 1, translateX: 0, scale: 1 }}
+                  transition={{ delay: 400 + index * 100, type: 'spring', damping: 15 }}
+                  style={[styles.timelineItem, isLeft ? styles.timelineItemLeft : styles.timelineItemRight]}
                 >
-                  <Icon size={18} color="#ffffff" strokeWidth={2.5} />
+                  <MotiView
+                    from={{ scale: 0, rotate: '-180deg' }}
+                    animate={{ scale: 1, rotate: '0deg' }}
+                    transition={{ delay: 500 + index * 100, type: 'spring', damping: 12 }}
+                    style={[
+                      styles.timelineNode,
+                      { backgroundColor: color, borderColor: colors.containerBg },
+                      isLeft ? styles.timelineNodeLeft : styles.timelineNodeRight
+                    ]}
+                  >
+                    <Icon size={18} color="#ffffff" strokeWidth={2.5} />
+                  </MotiView>
+
+                  <View style={[styles.eventCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+                    <View style={styles.eventHeader}>
+                      <View style={[styles.eventTypeBox, { backgroundColor: `${color}15` }]}>
+                        <Text style={[styles.eventType, { color }]}>{event.type}</Text>
+                      </View>
+                      <Text style={[styles.eventDate, { color: colors.textTertiary }]}>{event.date}</Text>
+                    </View>
+                    <Text style={[styles.eventTitle, { color: colors.text }]}>{event.title}</Text>
+
+                    <View style={styles.eventFooter}>
+                      <TouchableOpacity
+                        style={[styles.viewButton, { borderColor: color }]}
+                        onPress={() => handleViewDetails(event)}
+                      >
+                        <Text style={[styles.viewButtonText, { color }]}>View Details</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </MotiView>
 
-                <View style={[styles.eventCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
-                  <View style={styles.eventHeader}>
-                    <View style={[styles.eventTypeBox, { backgroundColor: `${color}15` }]}>
-                      <Text style={[styles.eventType, { color }]}>{event.type}</Text>
-                    </View>
-                    <Text style={[styles.eventDate, { color: colors.textTertiary }]}>{event.date}</Text>
-                  </View>
-                  <Text style={[styles.eventTitle, { color: colors.text }]}>{event.title}</Text>
-
-                  <View style={styles.eventFooter}>
-                    <TouchableOpacity
-                      style={[styles.viewButton, { borderColor: color }]}
-                      onPress={() => handleViewDetails(event)}
-                    >
-                      <Text style={[styles.viewButtonText, { color }]}>View Details</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </MotiView>
+                {!isLast && (
+                  <MotiView
+                    from={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: 600 + index * 100, type: 'spring', damping: 20 }}
+                    style={[
+                      styles.curvedConnector,
+                      { borderColor: colors.cardBorder },
+                      isLeft ? styles.curvedConnectorLeft : styles.curvedConnectorRight
+                    ]}
+                  />
+                )}
+              </View>
             );
           })}
         </View>
@@ -417,22 +434,23 @@ const styles = StyleSheet.create({
   },
   timelineContainer: {
     position: 'relative',
-    paddingLeft: 20,
-  },
-  timelineLine: {
-    position: 'absolute',
-    left: 18,
-    top: 30,
-    bottom: 0,
-    width: 2,
+    paddingVertical: 8,
   },
   timelineItem: {
-    marginBottom: 20,
     position: 'relative',
+    width: '50%',
+    paddingHorizontal: 12,
+  },
+  timelineItemLeft: {
+    alignSelf: 'flex-start',
+    paddingRight: 20,
+  },
+  timelineItemRight: {
+    alignSelf: 'flex-end',
+    paddingLeft: 20,
   },
   timelineNode: {
     position: 'absolute',
-    left: -20,
     top: 12,
     width: 36,
     height: 36,
@@ -442,11 +460,39 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     zIndex: 2,
   },
+  timelineNodeLeft: {
+    right: -18,
+  },
+  timelineNodeRight: {
+    left: -18,
+  },
   eventCard: {
-    marginLeft: 36,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
+  },
+  curvedConnector: {
+    height: 40,
+    borderTopWidth: 2,
+    borderBottomWidth: 0,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+    borderStyle: 'solid',
+    marginVertical: 4,
+  },
+  curvedConnectorLeft: {
+    width: '50%',
+    alignSelf: 'flex-start',
+    marginLeft: '50%',
+    borderTopRightRadius: 40,
+    borderRightWidth: 2,
+  },
+  curvedConnectorRight: {
+    width: '50%',
+    alignSelf: 'flex-end',
+    marginRight: '50%',
+    borderTopLeftRadius: 40,
+    borderLeftWidth: 2,
   },
   eventHeader: {
     flexDirection: 'row',
