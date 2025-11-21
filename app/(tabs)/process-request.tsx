@@ -1,60 +1,92 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { ArrowLeft, FlaskConical, User, Stethoscope, Building2, CheckSquare, FileText, Image as ImageIcon, Upload, X } from 'lucide-react-native';
+import { ArrowLeft, FlaskConical, User, Stethoscope, CheckSquare, Upload, X, Eye } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
-
-interface UploadedFile {
-  id: string;
-  name: string;
-  type: 'pdf' | 'image';
-}
+import { useLabRequests, UploadedFile } from '../../contexts/LabRequestContext';
+import * as DocumentPicker from 'expo-document-picker';
 
 export default function ProcessRequestScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { isDark } = useTheme();
   const colors = isDark ? darkTheme : lightTheme;
+  const { getRequestById, updateRequestStatus } = useLabRequests();
 
-  const requestData = params.requestData ? JSON.parse(params.requestData as string) : null;
+  const requestId = params.requestId ? parseInt(params.requestId as string) : null;
+  const request = requestId ? getRequestById(requestId) : null;
+
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [uploading, setUploading] = useState(false);
 
-  if (!requestData) {
-    return null;
+  if (!request) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.containerBg }]}>
+        <Text style={[styles.errorText, { color: colors.text }]}>Request not found</Text>
+      </View>
+    );
   }
 
-  const handleUploadPdf = () => {
-    const newFile: UploadedFile = {
-      id: Date.now().toString(),
-      name: `report_CBC_23Nov.pdf`,
-      type: 'pdf',
-    };
-    setUploadedFiles([...uploadedFiles, newFile]);
-  };
+  const handleFileUpload = async () => {
+    try {
+      setUploading(true);
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
 
-  const handleUploadImage = () => {
-    const newFile: UploadedFile = {
-      id: Date.now().toString(),
-      name: `file_Lipid_23Nov.png`,
-      type: 'image',
-    };
-    setUploadedFiles([...uploadedFiles, newFile]);
+      if (result.canceled) {
+        setUploading(false);
+        return;
+      }
+
+      const newFiles: UploadedFile[] = result.assets.map((asset) => {
+        const fileType = asset.mimeType?.startsWith('image/') ? 'image' : 'pdf';
+        return {
+          id: Date.now().toString() + Math.random().toString(36),
+          name: asset.name,
+          type: fileType as 'pdf' | 'image',
+          uri: asset.uri,
+          size: asset.size || 0,
+        };
+      });
+
+      setUploadedFiles((prev) => [...prev, ...newFiles]);
+      setUploading(false);
+    } catch (error) {
+      setUploading(false);
+      Alert.alert('Error', 'Failed to upload file. Please try again.');
+    }
   };
 
   const handleRemoveFile = (id: string) => {
-    setUploadedFiles(uploadedFiles.filter(file => file.id !== id));
+    setUploadedFiles((prev) => prev.filter(file => file.id !== id));
+  };
+
+  const handlePreviewFile = (file: UploadedFile) => {
+    Alert.alert('File Preview', `Preview for ${file.name}\n\nThis would open a full preview in a production app.`);
   };
 
   const handleSubmit = () => {
+    if (uploadedFiles.length === 0 || !requestId) return;
+
+    updateRequestStatus(requestId, uploadedFiles);
+
     router.push({
       pathname: '/success-confirmation',
       params: {
-        requestData: JSON.stringify(requestData),
-        uploadedFiles: JSON.stringify(uploadedFiles),
+        requestId: requestId.toString(),
       },
     });
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -89,11 +121,11 @@ export default function ProcessRequestScreen() {
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textTertiary }]}>Name:</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{requestData.patient}</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{request.patient}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textTertiary }]}>Patient ID:</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{requestData.patientId}</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{request.patientId}</Text>
           </View>
         </MotiView>
 
@@ -111,11 +143,11 @@ export default function ProcessRequestScreen() {
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textTertiary }]}>Doctor:</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{requestData.doctor}</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{request.doctor}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textTertiary }]}>Hospital:</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{requestData.hospital}</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{request.hospital}</Text>
           </View>
         </MotiView>
 
@@ -131,7 +163,7 @@ export default function ProcessRequestScreen() {
             </View>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Requested Tests</Text>
           </View>
-          {requestData.tests.map((test: string, index: number) => (
+          {request.tests.map((test: string, index: number) => (
             <View key={index} style={styles.testItem}>
               <View style={[styles.testCheckbox, { backgroundColor: `${colors.accent}15`, borderColor: colors.accent }]}>
                 <Text style={[styles.checkmark, { color: colors.accent }]}>✓</Text>
@@ -151,34 +183,27 @@ export default function ProcessRequestScreen() {
             <View style={[styles.iconBadge, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
               <Upload size={20} color="#3b82f6" strokeWidth={2} />
             </View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Upload Report</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>Upload Reports</Text>
           </View>
 
-          <View style={styles.uploadButtons}>
-            <TouchableOpacity onPress={handleUploadPdf} style={styles.uploadButton} activeOpacity={0.7}>
-              <LinearGradient
-                colors={['#ef4444', '#dc2626']}
-                style={styles.uploadGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <FileText size={20} color="#ffffff" strokeWidth={2} />
-                <Text style={styles.uploadButtonText}>Upload PDF</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={handleUploadImage} style={styles.uploadButton} activeOpacity={0.7}>
-              <LinearGradient
-                colors={['#8b5cf6', '#7c3aed']}
-                style={styles.uploadGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <ImageIcon size={20} color="#ffffff" strokeWidth={2} />
-                <Text style={styles.uploadButtonText}>Upload Image</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={handleFileUpload}
+            disabled={uploading}
+            style={styles.uploadButton}
+            activeOpacity={0.7}
+          >
+            <LinearGradient
+              colors={uploading ? ['#94a3b8', '#64748b'] : ['#3b82f6', '#2563eb']}
+              style={styles.uploadGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Upload size={20} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.uploadButtonText}>
+                {uploading ? 'Uploading...' : 'Upload Report'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
 
           {uploadedFiles.length > 0 && (
             <View style={styles.uploadedFilesContainer}>
@@ -195,22 +220,29 @@ export default function ProcessRequestScreen() {
                 >
                   <View style={styles.fileLeft}>
                     <View style={[styles.fileIcon, { backgroundColor: file.type === 'pdf' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(139, 92, 246, 0.15)' }]}>
-                      {file.type === 'pdf' ? (
-                        <FileText size={16} color="#ef4444" strokeWidth={2} />
-                      ) : (
-                        <ImageIcon size={16} color="#8b5cf6" strokeWidth={2} />
-                      )}
+                      <Text style={styles.fileIconText}>{file.type === 'pdf' ? '📄' : '🖼️'}</Text>
                     </View>
                     <View style={styles.fileInfo}>
-                      <Text style={[styles.fileName, { color: colors.text }]}>{file.name}</Text>
+                      <Text style={[styles.fileName, { color: colors.text }]} numberOfLines={1}>{file.name}</Text>
                       <Text style={[styles.fileType, { color: colors.textTertiary }]}>
-                        {file.type === 'pdf' ? 'PDF Document' : 'Image File'}
+                        {formatFileSize(file.size)}
                       </Text>
                     </View>
                   </View>
-                  <TouchableOpacity onPress={() => handleRemoveFile(file.id)} style={styles.removeButton}>
-                    <X size={18} color={colors.textSecondary} strokeWidth={2} />
-                  </TouchableOpacity>
+                  <View style={styles.fileActions}>
+                    <TouchableOpacity
+                      onPress={() => handlePreviewFile(file)}
+                      style={[styles.actionButton, { backgroundColor: colors.accentLight }]}
+                    >
+                      <Eye size={16} color={colors.accent} strokeWidth={2} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => handleRemoveFile(file.id)}
+                      style={[styles.actionButton, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}
+                    >
+                      <X size={16} color="#ef4444" strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
                 </MotiView>
               ))}
             </View>
@@ -232,7 +264,7 @@ export default function ProcessRequestScreen() {
             end={{ x: 1, y: 1 }}
           >
             <Upload size={20} color="#ffffff" strokeWidth={2} />
-            <Text style={styles.submitButtonText}>Mark as Processed + Upload Report</Text>
+            <Text style={styles.submitButtonText}>Submit Report</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -341,15 +373,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     flex: 1,
   },
-  uploadButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
   uploadButton: {
-    flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
+    marginBottom: 16,
   },
   uploadGradient: {
     flexDirection: 'row',
@@ -359,7 +386,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   uploadButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
   },
@@ -393,6 +420,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  fileIconText: {
+    fontSize: 18,
+  },
   fileInfo: {
     flex: 1,
   },
@@ -405,7 +435,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Inter-Regular',
   },
-  removeButton: {
+  fileActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
     width: 32,
     height: 32,
     borderRadius: 8,
@@ -421,6 +455,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   submitButton: {
+    width: '70%',
+    alignSelf: 'center',
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -432,11 +468,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 16,
+    paddingVertical: 14,
   },
   submitButtonText: {
     fontSize: 15,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
+  },
+  errorText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+    marginTop: 100,
   },
 });

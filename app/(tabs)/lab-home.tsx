@@ -2,102 +2,20 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { FlaskConical, FileText, Clock, CheckCircle2, Bell, Settings, Home, Search, Calendar, User, Sun, Moon, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { FlaskConical, Clock, CheckCircle2, Bell, Settings, Home, Search, Calendar, User, Sun, Moon, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
+import { useLabRequests } from '../../contexts/LabRequestContext';
 
-type TestStatus = 'pending' | 'processing' | 'completed';
 type FilterType = 'pending' | 'completed' | 'all';
-
-interface TestRequest {
-  id: number;
-  patient: string;
-  patientId: string;
-  doctor: string;
-  hospital: string;
-  tests: string[];
-  doctorNote: string;
-  status: TestStatus;
-  timestamp: string;
-  uploadedReports: number;
-  priority: 'high' | 'normal';
-}
-
-const testRequestsData: TestRequest[] = [
-  {
-    id: 1,
-    patient: 'Robert Johnson',
-    patientId: 'P-101',
-    doctor: 'Dr. Mehta',
-    hospital: 'Yashwant Hospital, Pune',
-    tests: ['Complete Blood Count', 'Lipid Profile'],
-    doctorNote: 'Check anemia',
-    status: 'pending',
-    timestamp: '2 hours ago',
-    uploadedReports: 0,
-    priority: 'high',
-  },
-  {
-    id: 2,
-    patient: 'Linda Martinez',
-    patientId: 'P-102',
-    doctor: 'Dr. Sharma',
-    hospital: 'City Hospital, Mumbai',
-    tests: ['Lipid Profile'],
-    doctorNote: 'Regular checkup',
-    status: 'pending',
-    timestamp: '4 hours ago',
-    uploadedReports: 0,
-    priority: 'normal',
-  },
-  {
-    id: 3,
-    patient: 'David Wilson',
-    patientId: 'P-103',
-    doctor: 'Dr. Patel',
-    hospital: 'Apollo Hospital, Delhi',
-    tests: ['Thyroid Function Test'],
-    doctorNote: 'Follow-up test',
-    status: 'pending',
-    timestamp: '5 hours ago',
-    uploadedReports: 0,
-    priority: 'normal',
-  },
-  {
-    id: 4,
-    patient: 'Sarah Smith',
-    patientId: 'P-104',
-    doctor: 'Dr. Kumar',
-    hospital: 'Max Hospital, Bangalore',
-    tests: ['Blood Sugar', 'HbA1c'],
-    doctorNote: 'Diabetic patient monitoring',
-    status: 'completed',
-    timestamp: '8 hours ago',
-    uploadedReports: 2,
-    priority: 'normal',
-  },
-  {
-    id: 5,
-    patient: 'Michael Brown',
-    patientId: 'P-105',
-    doctor: 'Dr. Singh',
-    hospital: 'Fortis Hospital, Chennai',
-    tests: ['Liver Function Test'],
-    doctorNote: '',
-    status: 'completed',
-    timestamp: '10 hours ago',
-    uploadedReports: 1,
-    priority: 'normal',
-  },
-];
 
 export default function LabHomeScreen() {
   const router = useRouter();
   const { isDark, toggleTheme } = useTheme();
   const colors = isDark ? darkTheme : lightTheme;
+  const { testRequests } = useLabRequests();
   const [activeFilter, setActiveFilter] = useState<FilterType>('pending');
   const [expandedCard, setExpandedCard] = useState<number | null>(null);
-  const [testRequests, setTestRequests] = useState<TestRequest[]>(testRequestsData);
 
   const pendingCount = testRequests.filter(r => r.status === 'pending').length;
   const completedCount = testRequests.filter(r => r.status === 'completed').length;
@@ -114,21 +32,29 @@ export default function LabHomeScreen() {
     return request.status === activeFilter;
   });
 
-  const getStatusBadge = (status: TestStatus) => {
+  const getStatusBadge = (status: string) => {
     const statusConfig = {
       pending: { label: 'Pending', color: '#FFA500', emoji: '🟡' },
       processing: { label: 'Processing', color: '#007BFF', emoji: '🔵' },
       completed: { label: 'Completed', color: '#28A745', emoji: '🟢' },
     };
-    return statusConfig[status];
+    return statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
   };
 
-  const handleProcessRequest = (request: TestRequest) => {
+  const handleProcessRequest = (request: any) => {
     router.push({
       pathname: '/process-request',
       params: {
         requestId: request.id.toString(),
-        requestData: JSON.stringify(request),
+      },
+    });
+  };
+
+  const handleViewReports = (request: any) => {
+    router.push({
+      pathname: '/view-reports',
+      params: {
+        requestId: request.id.toString(),
       },
     });
   };
@@ -307,7 +233,7 @@ export default function LabHomeScreen() {
                             <View style={styles.expandedRow}>
                               <Text style={[styles.expandedLabel, { color: colors.textTertiary }]}>Reports:</Text>
                               <Text style={[styles.expandedValue, { color: colors.text }]}>
-                                {request.uploadedReports} file(s) uploaded
+                                {request.uploadedFiles.length} file(s) uploaded
                               </Text>
                             </View>
                           )}
@@ -324,27 +250,32 @@ export default function LabHomeScreen() {
                   </View>
                 </TouchableOpacity>
 
-                {request.status === 'pending' ? (
-                  <TouchableOpacity
-                    style={styles.processButton}
-                    onPress={() => handleProcessRequest(request)}
-                  >
-                    <LinearGradient
-                      colors={['#f59e0b', '#d97706']}
-                      style={styles.processGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
+                <View style={styles.buttonContainer}>
+                  {request.status === 'pending' ? (
+                    <TouchableOpacity
+                      style={styles.processButton}
+                      onPress={() => handleProcessRequest(request)}
                     >
-                      <Text style={styles.processText}>Process Request</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity style={styles.viewButton}>
-                    <View style={[styles.viewButtonInner, { backgroundColor: colors.accentLight }]}>
-                      <Text style={[styles.viewButtonText, { color: colors.accent }]}>View Reports</Text>
-                    </View>
-                  </TouchableOpacity>
-                )}
+                      <LinearGradient
+                        colors={['#f59e0b', '#d97706']}
+                        style={styles.processGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Text style={styles.processText}>Process Request</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.viewButton}
+                      onPress={() => handleViewReports(request)}
+                    >
+                      <View style={[styles.viewButtonInner, { backgroundColor: colors.accentLight }]}>
+                        <Text style={[styles.viewButtonText, { color: colors.accent }]}>View Reports</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </MotiView>
             );
           })}
@@ -356,40 +287,6 @@ export default function LabHomeScreen() {
               </Text>
             </View>
           )}
-        </MotiView>
-
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ delay: 1000, type: 'spring' }}
-          style={styles.quickActions}
-        >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
-          <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionButton}>
-              <LinearGradient
-                colors={['#3b82f6', '#2563eb']}
-                style={styles.actionGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <FlaskConical size={24} color="#ffffff" strokeWidth={2} />
-                <Text style={styles.actionText}>New Test</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton}>
-              <LinearGradient
-                colors={['#10b981', '#059669']}
-                style={styles.actionGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <FileText size={24} color="#ffffff" strokeWidth={2} />
-                <Text style={styles.actionText}>Reports</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
         </MotiView>
       </ScrollView>
 
@@ -623,7 +520,11 @@ const styles = StyleSheet.create({
     color: '#1e293b',
     flex: 1,
   },
+  buttonContainer: {
+    alignItems: 'center',
+  },
   processButton: {
+    width: '70%',
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -638,6 +539,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   viewButton: {
+    width: '70%',
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -662,30 +564,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#94a3b8',
-  },
-  quickActions: {
-    marginBottom: 32,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
-  actionButton: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  actionGradient: {
-    paddingVertical: 20,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    gap: 8,
-  },
-  actionText: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#ffffff',
   },
   bottomNav: {
     position: 'absolute',

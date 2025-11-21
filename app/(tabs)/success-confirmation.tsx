@@ -2,21 +2,27 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { CheckCircle2, User, Stethoscope, Building2, FileText, Clock, Send, CheckCheck } from 'lucide-react-native';
+import { CheckCircle2, User, Stethoscope, FileText, Clock, Send, CheckCheck } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
+import { useLabRequests } from '../../contexts/LabRequestContext';
 
 export default function SuccessConfirmationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { isDark } = useTheme();
   const colors = isDark ? darkTheme : lightTheme;
+  const { getRequestById } = useLabRequests();
 
-  const requestData = params.requestData ? JSON.parse(params.requestData as string) : null;
-  const uploadedFiles = params.uploadedFiles ? JSON.parse(params.uploadedFiles as string) : [];
+  const requestId = params.requestId ? parseInt(params.requestId as string) : null;
+  const request = requestId ? getRequestById(requestId) : null;
 
-  if (!requestData) {
-    return null;
+  if (!request) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.containerBg }]}>
+        <Text style={[styles.errorText, { color: colors.text }]}>Request not found</Text>
+      </View>
+    );
   }
 
   const handleGoBack = () => {
@@ -70,19 +76,19 @@ export default function SuccessConfirmationScreen() {
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textTertiary }]}>Name:</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{requestData.patient}</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{request.patient}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textTertiary }]}>Patient ID:</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{requestData.patientId}</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{request.patientId}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textTertiary }]}>Doctor:</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{requestData.doctor}</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{request.doctor}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.textTertiary }]}>Hospital:</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{requestData.hospital}</Text>
+            <Text style={[styles.infoValue, { color: colors.text }]}>{request.hospital}</Text>
           </View>
         </MotiView>
 
@@ -98,7 +104,7 @@ export default function SuccessConfirmationScreen() {
             </View>
             <Text style={[styles.cardTitle, { color: colors.text }]}>Uploaded Reports</Text>
           </View>
-          {uploadedFiles.map((file: any, index: number) => (
+          {request.uploadedFiles.map((file, index) => (
             <View key={file.id} style={styles.reportItem}>
               <View style={styles.reportLeft}>
                 <View style={[styles.reportIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
@@ -106,7 +112,7 @@ export default function SuccessConfirmationScreen() {
                 </View>
                 <View style={styles.reportInfo}>
                   <Text style={[styles.reportTest, { color: colors.text }]}>
-                    {requestData.tests[index] || 'Test Report'}
+                    {request.tests[index] || 'Test Report'}
                   </Text>
                   <Text style={[styles.reportFile, { color: colors.textTertiary }]}>{file.name}</Text>
                 </View>
@@ -309,6 +315,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   backToDashboardButton: {
+    width: '70%',
+    alignSelf: 'center',
     borderRadius: 16,
     overflow: 'hidden',
   },
@@ -321,5 +329,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
+  },
+  errorText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    textAlign: 'center',
+    marginTop: 100,
   },
 });
