@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Users, Calendar, Clock, Bell, Settings, Home, QrCode, Sun, Moon, ClipboardList } from 'lucide-react-native';
+import { Users, Calendar, Clock, Bell, Settings, Home, QrCode, Sun, Moon, ClipboardList, User } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
 import QRScanner from '../../components/QRScanner';
@@ -270,21 +270,6 @@ export default function DoctorHomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setShowQRScanner(true)}
-            style={styles.qrFloatingButton}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#6366F1', '#818CF8']}
-              style={styles.qrFloatingGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <QrCode size={28} color="#ffffff" strokeWidth={2} />
-            </LinearGradient>
-          </TouchableOpacity>
-
-          <TouchableOpacity
             onPress={() => router.push('/(tabs)/doctor-appointments')}
             style={styles.navButton}
             activeOpacity={0.7}
@@ -297,6 +282,26 @@ export default function DoctorHomeScreen() {
                 <Text style={styles.navBadgeText}>{pendingCount}</Text>
               </View>
             )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setShowQRScanner(true)}
+            style={styles.navButton}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
+              <QrCode size={24} color={colors.textSecondary} strokeWidth={2} />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/doctor-profile')}
+            style={styles.navButton}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
+              <User size={24} color={colors.textSecondary} strokeWidth={2} />
+            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -536,36 +541,16 @@ const styles = StyleSheet.create({
   },
   navContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 30,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    gap: 16,
+    borderRadius: 28,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
     borderWidth: 1,
     shadowColor: '#10b981',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 16,
-  },
-  qrFloatingButton: {
-    position: 'relative',
-    bottom: 20,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    overflow: 'hidden',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 16,
-  },
-  qrFloatingGradient: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   navButton: {
     position: 'relative',
