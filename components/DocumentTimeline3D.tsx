@@ -1,17 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useRef, Suspense } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Text3D, Center, useTexture } from '@react-three/drei';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  interpolate,
-  Extrapolate,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedScrollHandler, useSharedValue, interpolate, Extrapolate } from 'react-native-reanimated';
 import { Upload, X, Layers } from 'lucide-react-native';
 import { useTheme, lightTheme, darkTheme } from '../contexts/ThemeContext';
+import * as THREE from 'three';
 
 export interface Document {
   id: string;
@@ -24,13 +20,28 @@ export interface Document {
   fileType?: string;
 }
 
-interface DocumentTimelineProps {
+interface DocumentTimeline3DProps {
   documents: Document[];
   onUpload: () => void;
   onViewDocument: (doc: Document) => void;
 }
 
-const getDocumentIcon = (type: string) => {
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const getDocumentColor = (type: string): THREE.Color => {
+  switch (type) {
+    case 'prescription':
+      return new THREE.Color('#10B981');
+    case 'report':
+      return new THREE.Color('#6366F1');
+    case 'invoice':
+      return new THREE.Color('#F59E0B');
+    default:
+      return new THREE.Color('#EF4444');
+  }
+};
+
+const getDocumentEmoji = (type: string) => {
   switch (type) {
     case 'prescription':
       return '💊';
@@ -43,146 +54,221 @@ const getDocumentIcon = (type: string) => {
   }
 };
 
-const getDocumentColor = (type: string, isDark: boolean) => {
-  const colors = {
-    prescription: isDark ? '#34D399' : '#10B981',
-    report: isDark ? '#818CF8' : '#6366F1',
-    invoice: isDark ? '#FBBF24' : '#F59E0B',
-    other: isDark ? '#F87171' : '#EF4444',
-  };
-  return colors[type as keyof typeof colors] || colors.other;
-};
-
-function TimelineNode({
-  doc,
-  index,
-  total,
-  color,
-  isDark,
-  colors,
-  onPress,
-}: {
+interface TimelineNodeProps {
   doc: Document;
   index: number;
   total: number;
-  color: string;
-  isDark: boolean;
-  colors: any;
+  scrollY: number;
   onPress: () => void;
-}) {
-  const scale = useSharedValue(1);
-  const rotateZ = useSharedValue(0);
+}
 
-  const gesture = Gesture.Pan()
-    .onBegin(() => {
-      scale.value = withSpring(1.15);
-      rotateZ.value = withSpring(360);
-    })
-    .onEnd(() => {
-      scale.value = withSpring(1);
-      rotateZ.value = withSpring(0);
-    });
+function TimelineNode({ doc, index, total, scrollY, onPress }: TimelineNodeProps) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const groupRef = useRef<THREE.Group>(null);
+  const [hovered, setHovered] = useState(false);
 
-  const animatedNodeStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { scale: scale.value },
-        { rotateZ: `${rotateZ.value}deg` },
-      ] as any,
-    };
+  const color = getDocumentColor(doc.type);
+
+  const getCurvedPosition = (idx: number, totalDocs: number, scroll: number) => {
+    const t = idx / Math.max(totalDocs - 1, 1);
+    const yBase = (totalDocs - 1 - idx) * 2.5;
+
+    const normalizedScroll = scroll / (totalDocs * 120);
+    const yOffset = normalizedScroll * (totalDocs * 2.5);
+
+    const y = yBase - yOffset;
+    const x = Math.sin(t * Math.PI * 1.5) * 1.5;
+    const z = Math.cos(t * Math.PI * 1.5) * 0.8;
+
+    return { x, y, z };
+  };
+
+  useFrame((state) => {
+    if (!meshRef.current || !groupRef.current) return;
+
+    const targetPos = getCurvedPosition(index, total, scrollY);
+
+    groupRef.current.position.x = THREE.MathUtils.lerp(
+      groupRef.current.position.x,
+      targetPos.x,
+      0.1
+    );
+    groupRef.current.position.y = THREE.MathUtils.lerp(
+      groupRef.current.position.y,
+      targetPos.y,
+      0.1
+    );
+    groupRef.current.position.z = THREE.MathUtils.lerp(
+      groupRef.current.position.z,
+      targetPos.z,
+      0.1
+    );
+
+    const distanceFromCenter = Math.abs(groupRef.current.position.y);
+    const scale = THREE.MathUtils.lerp(1, 0.5, Math.min(distanceFromCenter / 5, 1));
+    const opacity = THREE.MathUtils.lerp(1, 0.2, Math.min(distanceFromCenter / 8, 1));
+
+    meshRef.current.scale.setScalar(hovered ? scale * 1.2 : scale);
+
+    if (meshRef.current.material instanceof THREE.MeshStandardMaterial) {
+      meshRef.current.material.opacity = opacity;
+    }
+
+    meshRef.current.rotation.y += 0.005;
+    meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5 + index) * 0.1;
   });
 
-  const isLeft = index % 2 === 0;
+  const initialPos = getCurvedPosition(index, total, scrollY);
 
   return (
-    <MotiView
-      from={{
-        opacity: 0,
-        scale: 0.5,
-      }}
-      animate={{
-        opacity: 1,
-        scale: 1,
-      }}
-      transition={{
-        type: 'spring',
-        delay: 200 + index * 150,
-        damping: 15,
-        stiffness: 100,
-      }}
-      style={[
-        styles.timelineItemContainer,
-        { justifyContent: isLeft ? 'flex-start' : 'flex-end' },
-      ]}
-    >
-      <View
-        style={[
-          styles.timelineItemRow,
-          { flexDirection: isLeft ? 'row' : 'row-reverse' },
-        ]}
+    <group ref={groupRef} position={[initialPos.x, initialPos.y, initialPos.z]}>
+      <mesh
+        ref={meshRef}
+        onClick={onPress}
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
       >
-        {/* Content Card */}
-        <TouchableOpacity
-          onPress={onPress}
-          style={[styles.contentCard, { maxWidth: '60%' }]}
-          activeOpacity={0.7}
-        >
-          <LinearGradient
-            colors={
-              isDark
-                ? [`${color}15`, `${color}08`]
-                : [`${color}12`, `${color}06`]
-            }
-            style={[
-              styles.cardGradient,
-              {
-                borderColor: `${color}30`,
-                borderLeftColor: color,
-                borderLeftWidth: 4,
-              },
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Text style={[styles.cardType, { color }]}>
-              {doc.type.toUpperCase()}
-            </Text>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>
-              {doc.title}
-            </Text>
-            <Text style={[styles.cardDate, { color: colors.textTertiary }]}>
-              {doc.date}
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
+        <dodecahedronGeometry args={[0.4, 0]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={hovered ? 0.6 : 0.3}
+          metalness={0.8}
+          roughness={0.2}
+          transparent
+          opacity={1}
+        />
+      </mesh>
 
-        {/* Node */}
-        <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.nodeWrapper, animatedNodeStyle]}>
-            <View style={[styles.nodeOuter, { borderColor: color }]}>
-              <View style={[styles.nodeInner, { backgroundColor: color }]}>
-                <Text style={styles.nodeIcon}>
-                  {getDocumentIcon(doc.type)}
-                </Text>
-              </View>
-            </View>
-          </Animated.View>
-        </GestureDetector>
-      </View>
-    </MotiView>
+      <mesh position={[0, 0, 0]}>
+        <torusGeometry args={[0.6, 0.04, 16, 100]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={0.4}
+          transparent
+          opacity={0.6}
+        />
+      </mesh>
+
+      <pointLight
+        position={[0, 0, 0]}
+        intensity={hovered ? 2 : 1}
+        distance={3}
+        color={color}
+      />
+    </group>
   );
 }
 
-export function DocumentTimeline({
-  documents,
-  onUpload,
-  onViewDocument,
-}: DocumentTimelineProps) {
+function TimelineSpine({ total, scrollY }: { total: number; scrollY: number }) {
+  const curveRef = useRef<THREE.Line>(null);
+
+  const getCurvedPosition = (idx: number, totalDocs: number) => {
+    const t = idx / Math.max(totalDocs - 1, 1);
+    const y = (totalDocs - 1 - idx) * 2.5;
+    const x = Math.sin(t * Math.PI * 1.5) * 1.5;
+    const z = Math.cos(t * Math.PI * 1.5) * 0.8;
+    return new THREE.Vector3(x, y, z);
+  };
+
+  const points = React.useMemo(() => {
+    const pts = [];
+    const segments = Math.max(total * 10, 50);
+
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const idx = t * (total - 1);
+      const y = (total - 1 - idx) * 2.5;
+      const x = Math.sin(t * Math.PI * 1.5) * 1.5;
+      const z = Math.cos(t * Math.PI * 1.5) * 0.8;
+      pts.push(new THREE.Vector3(x, y, z - 0.3));
+    }
+
+    return pts;
+  }, [total]);
+
+  useFrame(() => {
+    if (!curveRef.current) return;
+    const normalizedScroll = scrollY / (total * 120);
+    curveRef.current.position.y = -normalizedScroll * (total * 2.5);
+  });
+
+  return (
+    <group>
+      <line ref={curveRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={points.length}
+            array={new Float32Array(points.flatMap(p => [p.x, p.y, p.z]))}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial
+          color="#6366F1"
+          linewidth={2}
+          transparent
+          opacity={0.5}
+        />
+      </line>
+    </group>
+  );
+}
+
+function Scene({ documents, scrollY, onDocumentPress }: {
+  documents: Document[];
+  scrollY: number;
+  onDocumentPress: (doc: Document) => void;
+}) {
+  const { camera } = useThree();
+
+  React.useEffect(() => {
+    camera.position.set(2, 0, 8);
+  }, [camera]);
+
+  return (
+    <>
+      <ambientLight intensity={0.3} />
+      <directionalLight position={[10, 10, 5]} intensity={1} />
+      <directionalLight position={[-10, -10, -5]} intensity={0.5} />
+
+      <TimelineSpine total={documents.length} scrollY={scrollY} />
+
+      {documents.map((doc, index) => (
+        <TimelineNode
+          key={doc.id}
+          doc={doc}
+          index={index}
+          total={documents.length}
+          scrollY={scrollY}
+          onPress={() => onDocumentPress(doc)}
+        />
+      ))}
+
+      <fog attach="fog" args={['#0F172A', 5, 20]} />
+    </>
+  );
+}
+
+export function DocumentTimeline3D({ documents, onUpload, onViewDocument }: DocumentTimeline3DProps) {
   const { isDark } = useTheme();
   const colors = isDark ? darkTheme : lightTheme;
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
+  const scrollY = useSharedValue(0);
 
   const sortedDocs = [...documents].sort((a, b) => b.timestamp - a.timestamp);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const handleDocumentPress = (doc: Document) => {
+    setSelectedDoc(doc);
+    onViewDocument(doc);
+  };
 
   if (documents.length === 0) {
     return (
@@ -251,37 +337,51 @@ export function DocumentTimeline({
           <Layers size={20} color={colors.accent} strokeWidth={2} />
         </View>
 
-        {/* Vertical Timeline */}
-        <View style={styles.timelineContainer}>
-          {/* Timeline Line */}
-          <View
-            style={[
-              styles.timelineLine,
-              {
-                backgroundColor: isDark
-                  ? 'rgba(255, 255, 255, 0.1)'
-                  : 'rgba(0, 0, 0, 0.08)',
-              },
-            ]}
-          />
-
-          {/* Timeline Items */}
-          {sortedDocs.map((doc, index) => {
-            const color = getDocumentColor(doc.type, isDark);
-
-            return (
-              <TimelineNode
-                key={doc.id}
-                doc={doc}
-                index={index}
-                total={sortedDocs.length}
-                color={color}
-                isDark={isDark}
-                colors={colors}
-                onPress={() => setSelectedDoc(doc)}
+        <View style={styles.canvasContainer}>
+          <Canvas
+            style={[styles.canvas, { backgroundColor: isDark ? '#0F172A' : '#F8F9FF' }]}
+            camera={{ position: [0, 0, 8], fov: 50 }}
+          >
+            <Suspense fallback={null}>
+              <Scene
+                documents={sortedDocs}
+                scrollY={scrollY.value}
+                onDocumentPress={handleDocumentPress}
               />
-            );
-          })}
+            </Suspense>
+          </Canvas>
+
+          <Animated.ScrollView
+            style={styles.scrollOverlay}
+            contentContainerStyle={styles.scrollContent}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={true}
+          >
+            {sortedDocs.map((doc, index) => (
+              <TouchableOpacity
+                key={doc.id}
+                onPress={() => handleDocumentPress(doc)}
+                style={styles.docItem}
+                activeOpacity={0.7}
+              >
+                <View style={styles.docItemContent}>
+                  <Text style={[styles.docEmoji, { color: colors.text }]}>
+                    {getDocumentEmoji(doc.type)}
+                  </Text>
+                  <View style={styles.docInfo}>
+                    <Text style={[styles.docTitle, { color: colors.text }]} numberOfLines={1}>
+                      {doc.title}
+                    </Text>
+                    <Text style={[styles.docDate, { color: colors.textTertiary }]}>
+                      {doc.date}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+            <View style={styles.scrollSpacer} />
+          </Animated.ScrollView>
         </View>
 
         <TouchableOpacity onPress={onUpload} style={styles.addButton}>
@@ -436,7 +536,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -456,85 +556,57 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter-Bold',
   },
-  timelineContainer: {
+  canvasContainer: {
+    height: 400,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
     position: 'relative',
-    paddingVertical: 8,
-    marginBottom: 20,
   },
-  timelineLine: {
+  canvas: {
+    flex: 1,
+  },
+  scrollOverlay: {
     position: 'absolute',
-    left: '50%',
+    right: 0,
     top: 0,
     bottom: 0,
-    width: 3,
-    marginLeft: -1.5,
-    zIndex: 0,
+    width: 160,
   },
-  timelineItemContainer: {
-    marginBottom: 32,
-    paddingHorizontal: 16,
-  },
-  timelineItemRow: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  contentCard: {
+  scrollContent: {
+    paddingVertical: 20,
     paddingHorizontal: 12,
   },
-  cardGradient: {
-    borderRadius: 16,
-    padding: 14,
+  scrollSpacer: {
+    height: 100,
+  },
+  docItem: {
+    marginBottom: 12,
+    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderColor: 'rgba(99, 102, 241, 0.2)',
   },
-  cardType: {
-    fontSize: 10,
-    fontFamily: 'Inter-Bold',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-    textTransform: 'uppercase',
+  docItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  cardTitle: {
-    fontSize: 14,
+  docEmoji: {
+    fontSize: 24,
+  },
+  docInfo: {
+    flex: 1,
+  },
+  docTitle: {
+    fontSize: 13,
     fontFamily: 'Inter-SemiBold',
-    marginBottom: 4,
-    lineHeight: 18,
+    marginBottom: 2,
   },
-  cardDate: {
-    fontSize: 12,
+  docDate: {
+    fontSize: 11,
     fontFamily: 'Inter-Regular',
-  },
-  nodeWrapper: {
-    zIndex: 10,
-  },
-  nodeOuter: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  nodeInner: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nodeIcon: {
-    fontSize: 20,
   },
   addButton: {
     borderRadius: 16,

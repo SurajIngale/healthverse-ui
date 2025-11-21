@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { Heart, Calendar, FileText, Activity, Bell, Settings, Home, Search, User, Sun, Moon } from 'lucide-react-native';
+import { Heart, Calendar, FileText, Activity, Bell, Settings, Home, Search, User, Sun, Moon, Clock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
 
@@ -123,27 +123,27 @@ export default function PatientHomeScreen() {
         >
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/timeline')} style={styles.actionButton}>
               <LinearGradient
-                colors={['#3b82f6', '#2563eb']}
+                colors={['#6366f1', '#818cf8']}
                 style={styles.actionGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <Calendar size={24} color="#ffffff" strokeWidth={2} />
-                <Text style={styles.actionText}>Book Appointment</Text>
+                <Clock size={24} color="#ffffff" strokeWidth={2} />
+                <Text style={styles.actionText}>View Timeline</Text>
               </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/timeline')} style={styles.actionButton}>
               <LinearGradient
                 colors={['#10b981', '#059669']}
                 style={styles.actionGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <FileText size={24} color="#ffffff" strokeWidth={2} />
-                <Text style={styles.actionText}>View Reports</Text>
+                <Clock size={24} color="#ffffff" strokeWidth={2} />
+                <Text style={styles.actionText}>Medical Timeline</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -164,9 +164,9 @@ export default function PatientHomeScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/timeline')} style={styles.navButton} activeOpacity={0.7}>
             <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
-              <Calendar size={24} color={colors.textSecondary} strokeWidth={2} />
+              <Clock size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
           </TouchableOpacity>
 

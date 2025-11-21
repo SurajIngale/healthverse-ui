@@ -1,25 +1,145 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MotiView } from 'moti';
-import { Users, Calendar, Clock, TrendingUp, Bell, Settings, Home, Search, User, Sun, Moon } from 'lucide-react-native';
+import { Users, Calendar, Clock, Bell, Settings, Home, QrCode, Sun, Moon, ClipboardList, User } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
+import QRScanner from '../../components/QRScanner';
+
+interface Appointment {
+  id: string;
+  patientId: string;
+  patientName: string;
+  time: string;
+  type: string;
+  status: 'pending' | 'confirmed' | 'completed';
+  date: string;
+}
 
 export default function DoctorHomeScreen() {
+  const router = useRouter();
   const { isDark, toggleTheme } = useTheme();
   const colors = isDark ? darkTheme : lightTheme;
+  const [showQRScanner, setShowQRScanner] = useState(false);
+
+  const [allAppointments] = useState<Appointment[]>([
+    {
+      id: 'apt_req_1',
+      patientId: 'patient_123',
+      patientName: 'Emma Wilson',
+      time: '10:00 AM',
+      type: 'Check-up',
+      status: 'pending',
+      date: 'Jan 25, 2025',
+    },
+    {
+      id: 'apt_req_2',
+      patientId: 'patient_456',
+      patientName: 'Michael Chen',
+      time: '2:30 PM',
+      type: 'Follow-up',
+      status: 'pending',
+      date: 'Jan 26, 2025',
+    },
+  ]);
+
+  const [todaysAppointments] = useState<Appointment[]>([
+    {
+      id: 'apt_1',
+      patientId: 'patient_111',
+      patientName: 'James Brown',
+      time: '9:00 AM',
+      type: 'Follow-up',
+      status: 'confirmed',
+      date: 'Today',
+    },
+    {
+      id: 'apt_2',
+      patientId: 'patient_222',
+      patientName: 'Olivia Davis',
+      time: '11:30 AM',
+      type: 'Consultation',
+      status: 'confirmed',
+      date: 'Today',
+    },
+    {
+      id: 'apt_3',
+      patientId: 'patient_333',
+      patientName: 'Robert Johnson',
+      time: '2:00 PM',
+      type: 'Check-up',
+      status: 'confirmed',
+      date: 'Today',
+    },
+  ]);
+
+  const [upcomingAppointments] = useState<Appointment[]>([
+    {
+      id: 'apt_4',
+      patientId: 'patient_444',
+      patientName: 'Linda Martinez',
+      time: '10:00 AM',
+      type: 'Follow-up',
+      status: 'confirmed',
+      date: 'Jan 25, 2025',
+    },
+    {
+      id: 'apt_5',
+      patientId: 'patient_555',
+      patientName: 'David Wilson',
+      time: '3:30 PM',
+      type: 'Consultation',
+      status: 'confirmed',
+      date: 'Jan 26, 2025',
+    },
+  ]);
+
+  const pendingCount = allAppointments.filter(a => a.status === 'pending').length;
+  const completedToday = todaysAppointments.filter(a => a.status === 'completed').length;
+  const totalThisWeek = todaysAppointments.length + upcomingAppointments.length;
 
   const stats = [
-    { label: "Today's Patients", value: '12', icon: Users, color: '#10b981' },
-    { label: 'Appointments', value: '18', icon: Calendar, color: '#3b82f6' },
-    { label: 'Avg. Time', value: '25m', icon: Clock, color: '#f59e0b' },
+    {
+      label: "Today's Patients",
+      value: todaysAppointments.length.toString(),
+      subtitle: `${completedToday} completed`,
+      icon: Users,
+      color: '#10b981',
+      bgColor: 'rgba(16, 185, 129, 0.1)'
+    },
+    {
+      label: 'Pending Requests',
+      value: pendingCount.toString(),
+      subtitle: 'Need approval',
+      icon: Bell,
+      color: '#f59e0b',
+      bgColor: 'rgba(245, 158, 11, 0.1)'
+    },
+    {
+      label: 'This Week',
+      value: totalThisWeek.toString(),
+      subtitle: `${upcomingAppointments.length} upcoming`,
+      icon: Calendar,
+      color: '#6366F1',
+      bgColor: 'rgba(99, 102, 241, 0.1)'
+    },
   ];
 
-  const todaysAppointments = [
-    { patient: 'Emma Wilson', time: '10:00 AM', type: 'Follow-up', status: 'confirmed' },
-    { patient: 'James Brown', time: '11:30 AM', type: 'Consultation', status: 'confirmed' },
-    { patient: 'Olivia Davis', time: '2:00 PM', type: 'Check-up', status: 'pending' },
-  ];
+  const handleViewPatient = (patientId: string) => {
+    router.push({
+      pathname: '/(tabs)/doctor-patient-profile',
+      params: { patientId },
+    });
+  };
+
+  const handleQRScan = (data: string) => {
+    setShowQRScanner(false);
+    const patientId = data.split('patient_id=')[1]?.split('&')[0] || 'patient_123';
+    router.push({
+      pathname: '/(tabs)/doctor-patient-profile',
+      params: { patientId, walkIn: 'true' },
+    });
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.containerBg }]}>
@@ -53,106 +173,92 @@ export default function DoctorHomeScreen() {
           </View>
         </View>
 
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ delay: 200, type: 'spring' }}
-          style={styles.statsContainer}
-        >
-          {stats.map((stat, index) => {
+        <View style={styles.statsContainer}>
+          {stats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <MotiView
+              <View
                 key={stat.label}
-                from={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 300 + index * 100, type: 'spring' }}
                 style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
               >
-                <View style={[styles.statIcon, { backgroundColor: `${stat.color}15` }]}>
-                  <Icon size={24} color={stat.color} strokeWidth={2} />
+                <View style={[styles.statIconWrapper, { backgroundColor: stat.bgColor }]}>
+                  <Icon size={18} color={stat.color} strokeWidth={2} />
                 </View>
                 <Text style={[styles.statValue, { color: colors.text }]}>{stat.value}</Text>
-                <Text style={[styles.statLabel, { color: colors.textTertiary }]}>{stat.label}</Text>
-              </MotiView>
+                <Text style={[styles.statLabel, { color: colors.text }]}>{stat.label}</Text>
+                <Text style={[styles.statSubtitle, { color: colors.textTertiary }]}>{stat.subtitle}</Text>
+              </View>
             );
           })}
-        </MotiView>
+        </View>
 
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ delay: 600, type: 'spring' }}
-          style={styles.section}
-        >
+        <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Schedule</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textTertiary }]}>
+              {todaysAppointments.length} appointments
+            </Text>
+          </View>
+
+          {todaysAppointments.map((appointment, index) => (
+            <TouchableOpacity
+              key={appointment.id}
+              onPress={() => handleViewPatient(appointment.patientId)}
+              activeOpacity={0.7}
+              style={[styles.appointmentCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
+            >
+              <View style={styles.timeIndicator}>
+                <Clock size={16} color="#10b981" strokeWidth={2} />
+                <Text style={styles.timeText}>{appointment.time}</Text>
+              </View>
+
+              <View style={styles.appointmentContent}>
+                <View style={styles.appointmentLeft}>
+                  <View style={[styles.patientAvatar, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                    <Text style={[styles.avatarText, { color: '#10b981' }]}>{appointment.patientName.charAt(0)}</Text>
+                  </View>
+                  <View style={styles.appointmentInfo}>
+                    <Text style={[styles.patientName, { color: colors.text }]}>{appointment.patientName}</Text>
+                    <Text style={[styles.appointmentType, { color: colors.textTertiary }]}>{appointment.type}</Text>
+                  </View>
+                </View>
+                <View style={[styles.statusBadge, styles.statusBadgeConfirmed]}>
+                  <View style={styles.statusDot} />
+                  <Text style={styles.statusText}>Confirmed</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Upcoming</Text>
             <TouchableOpacity>
               <Text style={styles.sectionLink}>View All</Text>
             </TouchableOpacity>
           </View>
 
-          {todaysAppointments.map((appointment, index) => (
-            <MotiView
-              key={index}
-              from={{ opacity: 0, translateX: -20 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ delay: 700 + index * 100, type: 'spring' }}
-              style={[styles.appointmentCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
+          {upcomingAppointments.map((appointment) => (
+            <TouchableOpacity
+              key={appointment.id}
+              onPress={() => handleViewPatient(appointment.patientId)}
+              activeOpacity={0.7}
+              style={[styles.upcomingCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
             >
-              <View style={styles.appointmentLeft}>
-                <View style={styles.patientAvatar}>
-                  <Text style={styles.avatarText}>{appointment.patient.charAt(0)}</Text>
+              <View style={styles.upcomingLeft}>
+                <View style={styles.dateBox}>
+                  <Text style={styles.dateDay}>{appointment.date.split(' ')[1]}</Text>
+                  <Text style={styles.dateMonth}>{appointment.date.split(' ')[0]}</Text>
                 </View>
-                <View style={styles.appointmentInfo}>
-                  <Text style={[styles.patientName, { color: colors.text }]}>{appointment.patient}</Text>
-                  <View style={styles.appointmentMeta}>
-                    <Clock size={14} color="#94a3b8" strokeWidth={2} />
-                    <Text style={[styles.appointmentTime, { color: colors.textTertiary }]}>{appointment.time}</Text>
-                    <View style={[styles.separator, { backgroundColor: colors.textSecondary }]} />
-                    <Text style={[styles.appointmentType, { color: colors.textTertiary }]}>{appointment.type}</Text>
-                  </View>
+                <View>
+                  <Text style={[styles.patientName, { color: colors.text }]}>{appointment.patientName}</Text>
+                  <Text style={[styles.upcomingTime, { color: colors.textTertiary }]}>{appointment.time} • {appointment.type}</Text>
                 </View>
               </View>
-              <View style={[
-                styles.statusBadge,
-                appointment.status === 'confirmed' ? styles.statusConfirmed : styles.statusPending
-              ]}>
-                <Text style={styles.statusText}>
-                  {appointment.status === 'confirmed' ? 'Confirmed' : 'Pending'}
-                </Text>
-              </View>
-            </MotiView>
+            </TouchableOpacity>
           ))}
-        </MotiView>
-
-        <MotiView
-          from={{ opacity: 0, translateY: 20 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ delay: 1000, type: 'spring' }}
-          style={[styles.performanceCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
-        >
-          <View style={styles.performanceHeader}>
-            <Text style={[styles.performanceTitle, { color: colors.text }]}>This Week's Performance</Text>
-            <TrendingUp size={20} color="#10b981" strokeWidth={2} />
-          </View>
-          <View style={styles.performanceStats}>
-            <View style={styles.performanceStat}>
-              <Text style={styles.performanceValue}>48</Text>
-              <Text style={[styles.performanceLabel, { color: colors.textTertiary }]}>Patients Treated</Text>
-            </View>
-            <View style={styles.performanceDivider} />
-            <View style={styles.performanceStat}>
-              <Text style={styles.performanceValue}>4.8</Text>
-              <Text style={[styles.performanceLabel, { color: colors.textTertiary }]}>Avg. Rating</Text>
-            </View>
-            <View style={styles.performanceDivider} />
-            <View style={styles.performanceStat}>
-              <Text style={styles.performanceValue}>92%</Text>
-              <Text style={[styles.performanceLabel, { color: colors.textTertiary }]}>On-Time Rate</Text>
-            </View>
-          </View>
-        </MotiView>
+        </View>
       </ScrollView>
 
       <View style={styles.bottomNav}>
@@ -163,25 +269,54 @@ export default function DoctorHomeScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/doctor-appointments')}
+            style={styles.navButton}
+            activeOpacity={0.7}
+          >
             <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
-              <Search size={24} color={colors.textSecondary} strokeWidth={2} />
+              <ClipboardList size={24} color={colors.textSecondary} strokeWidth={2} />
+            </View>
+            {pendingCount > 0 && (
+              <View style={styles.navBadge}>
+                <Text style={styles.navBadgeText}>{pendingCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setShowQRScanner(true)}
+            style={styles.navButton}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
+              <QrCode size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
-            <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
-              <Calendar size={24} color={colors.textSecondary} strokeWidth={2} />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => router.push('/(tabs)/doctor-profile')}
+            style={styles.navButton}
+            activeOpacity={0.7}
+          >
             <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
               <User size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
           </TouchableOpacity>
         </View>
       </View>
+
+      <Modal
+        visible={showQRScanner}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowQRScanner(false)}
+      >
+        <QRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      </Modal>
     </View>
   );
 }
@@ -189,7 +324,6 @@ export default function DoctorHomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E0F2FF',
   },
   gradient: {
     position: 'absolute',
@@ -207,17 +341,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   greeting: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
-    color: '#64748b',
   },
   username: {
     fontSize: 28,
     fontFamily: 'Inter-Bold',
-    color: '#1e293b',
     marginTop: 4,
   },
   headerIcons: {
@@ -228,48 +360,50 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
   },
   statsContainer: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 32,
+    marginBottom: 24,
   },
   statCard: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 14,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.1)',
+    gap: 6,
+    minHeight: 110,
   },
-  statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+  statIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 2,
   },
   statValue: {
     fontSize: 24,
     fontFamily: 'Inter-Bold',
-    color: '#1e293b',
-    marginBottom: 4,
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: '#94a3b8',
+    fontSize: 11,
+    fontFamily: 'Inter-SemiBold',
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  statSubtitle: {
+    fontSize: 9,
+    fontFamily: 'Inter-Regular',
     textAlign: 'center',
   },
   section: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -280,7 +414,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Inter-Bold',
-    color: '#1e293b',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
   },
   sectionLink: {
     fontSize: 14,
@@ -288,12 +425,23 @@ const styles = StyleSheet.create({
     color: '#10b981',
   },
   appointmentCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.1)',
+  },
+  timeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  timeText: {
+    fontSize: 13,
+    fontFamily: 'Inter-SemiBold',
+    color: '#10b981',
+  },
+  appointmentContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -301,21 +449,19 @@ const styles = StyleSheet.create({
   appointmentLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     flex: 1,
   },
   patientAvatar: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
   avatarText: {
     fontSize: 18,
     fontFamily: 'Inter-Bold',
-    color: '#10b981',
   },
   appointmentInfo: {
     flex: 1,
@@ -323,89 +469,68 @@ const styles = StyleSheet.create({
   patientName: {
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  appointmentMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  appointmentTime: {
-    fontSize: 13,
-    fontFamily: 'Inter-Regular',
-    color: '#94a3b8',
-  },
-  separator: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#475569',
+    marginBottom: 2,
   },
   appointmentType: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#94a3b8',
+    marginTop: 2,
   },
   statusBadge: {
-    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 12,
+    gap: 6,
   },
-  statusConfirmed: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+  statusBadgeConfirmed: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
-  statusPending: {
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10b981',
   },
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'Inter-SemiBold',
     color: '#10b981',
   },
-  performanceCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: 20,
-    padding: 24,
+  upcomingCard: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.1)',
   },
-  performanceHeader: {
+  upcomingLeft: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    gap: 12,
   },
-  performanceTitle: {
-    fontSize: 16,
+  dateBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateDay: {
+    fontSize: 18,
     fontFamily: 'Inter-Bold',
-    color: '#1e293b',
+    color: '#6366F1',
   },
-  performanceStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  performanceStat: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  performanceValue: {
-    fontSize: 28,
-    fontFamily: 'Inter-Bold',
-    color: '#10b981',
-    marginBottom: 4,
-  },
-  performanceLabel: {
-    fontSize: 12,
+  dateMonth: {
+    fontSize: 10,
     fontFamily: 'Inter-Medium',
-    color: '#94a3b8',
-    textAlign: 'center',
+    color: '#6366F1',
   },
-  performanceDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: 'rgba(148, 163, 184, 0.2)',
+  upcomingTime: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    marginTop: 2,
   },
   bottomNav: {
     position: 'absolute',
@@ -416,13 +541,11 @@ const styles = StyleSheet.create({
   },
   navContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 28,
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
     shadowColor: '#10b981',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
@@ -430,14 +553,32 @@ const styles = StyleSheet.create({
     elevation: 16,
   },
   navButton: {
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  navBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#f59e0b',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+  navBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Inter-Bold',
+    color: '#ffffff',
   },
   navButtonInner: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: 'rgba(241, 245, 249, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
   },

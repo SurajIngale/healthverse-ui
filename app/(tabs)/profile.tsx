@@ -6,7 +6,7 @@ import { ArrowLeft, LogOut } from 'lucide-react-native';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
 import { ProfileCard } from '../../components/ProfileCard';
 import { ShareProfile } from '../../components/ShareProfile';
-import { DocumentTimeline, Document } from '../../components/DocumentTimeline';
+import { DocumentTimeline3D as DocumentTimeline, Document } from '../../components/DocumentTimeline3D';
 
 interface PatientData {
   id: string;
@@ -29,11 +29,8 @@ export default function ProfileScreen() {
     name: 'John Doe',
     dob: '15/05/1990',
     gender: 'Male',
-    bloodGroup: 'O+',
-    phone: '+1 (555) 123-4567',
-    email: 'john.doe@example.com',
-    address: '123 Health Street, Medical City, MC 12345',
-  });
+    phone: '+91-8208709752',
+     });
 
   const [documents, setDocuments] = useState<Document[]>([
     {
@@ -56,6 +53,34 @@ export default function ProfileScreen() {
       title: 'Consultation Invoice',
       date: 'Jan 10, 2025',
       timestamp: Date.now() - 86400000 * 10,
+    },
+    {
+      id: '4',
+      type: 'report',
+      title: 'X-Ray Chest Report',
+      date: 'Jan 5, 2025',
+      timestamp: Date.now() - 86400000 * 15,
+    },
+    {
+      id: '5',
+      type: 'prescription',
+      title: 'Cardiac Medication',
+      date: 'Dec 28, 2024',
+      timestamp: Date.now() - 86400000 * 23,
+    },
+    {
+      id: '6',
+      type: 'report',
+      title: 'MRI Scan Results',
+      date: 'Dec 20, 2024',
+      timestamp: Date.now() - 86400000 * 31,
+    },
+    {
+      id: '7',
+      type: 'invoice',
+      title: 'Lab Test Payment',
+      date: 'Dec 15, 2024',
+      timestamp: Date.now() - 86400000 * 36,
     },
   ]);
 

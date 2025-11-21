@@ -81,7 +81,12 @@ export default function LoginScreen() {
   };
 
   const handleGuestLogin = () => {
-    router.push('/(tabs)/patient-home');
+    const routes = {
+      patient: '/(tabs)/patient-home',
+      doctor: '/(tabs)/doctor-home',
+      lab: '/(tabs)/lab-home',
+    };
+    router.push(routes[selectedRole] as any);
   };
 
   return (
