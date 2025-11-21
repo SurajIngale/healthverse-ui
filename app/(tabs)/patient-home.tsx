@@ -135,15 +135,15 @@ export default function PatientHomeScreen() {
               </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionButton}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/timeline')} style={styles.actionButton}>
               <LinearGradient
                 colors={['#10b981', '#059669']}
                 style={styles.actionGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
               >
-                <FileText size={24} color="#ffffff" strokeWidth={2} />
-                <Text style={styles.actionText}>View Reports</Text>
+                <Clock size={24} color="#ffffff" strokeWidth={2} />
+                <Text style={styles.actionText}>Medical Timeline</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
