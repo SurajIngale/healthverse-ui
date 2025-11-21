@@ -68,17 +68,39 @@ function TimelineNode({ doc, index, total, scrollY, onPress }: TimelineNodeProps
   const [hovered, setHovered] = useState(false);
 
   const color = getDocumentColor(doc.type);
-  const yPosition = (total - 1 - index) * 2.5;
+
+  const getCurvedPosition = (idx: number, totalDocs: number, scroll: number) => {
+    const t = idx / Math.max(totalDocs - 1, 1);
+    const yBase = (totalDocs - 1 - idx) * 2.5;
+
+    const normalizedScroll = scroll / (totalDocs * 120);
+    const yOffset = normalizedScroll * (totalDocs * 2.5);
+
+    const y = yBase - yOffset;
+    const x = Math.sin(t * Math.PI * 1.5) * 1.5;
+    const z = Math.cos(t * Math.PI * 1.5) * 0.8;
+
+    return { x, y, z };
+  };
 
   useFrame((state) => {
     if (!meshRef.current || !groupRef.current) return;
 
-    const normalizedScroll = scrollY / (total * 120);
-    const targetY = yPosition - normalizedScroll * (total * 2.5);
+    const targetPos = getCurvedPosition(index, total, scrollY);
 
+    groupRef.current.position.x = THREE.MathUtils.lerp(
+      groupRef.current.position.x,
+      targetPos.x,
+      0.1
+    );
     groupRef.current.position.y = THREE.MathUtils.lerp(
       groupRef.current.position.y,
-      targetY,
+      targetPos.y,
+      0.1
+    );
+    groupRef.current.position.z = THREE.MathUtils.lerp(
+      groupRef.current.position.z,
+      targetPos.z,
       0.1
     );
 
@@ -96,8 +118,10 @@ function TimelineNode({ doc, index, total, scrollY, onPress }: TimelineNodeProps
     meshRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5 + index) * 0.1;
   });
 
+  const initialPos = getCurvedPosition(index, total, scrollY);
+
   return (
-    <group ref={groupRef} position={[0, yPosition, 0]}>
+    <group ref={groupRef} position={[initialPos.x, initialPos.y, initialPos.z]}>
       <mesh
         ref={meshRef}
         onClick={onPress}
@@ -138,27 +162,56 @@ function TimelineNode({ doc, index, total, scrollY, onPress }: TimelineNodeProps
 }
 
 function TimelineSpine({ total, scrollY }: { total: number; scrollY: number }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const spineHeight = Math.max(total * 2.5, 10);
+  const curveRef = useRef<THREE.Line>(null);
+
+  const getCurvedPosition = (idx: number, totalDocs: number) => {
+    const t = idx / Math.max(totalDocs - 1, 1);
+    const y = (totalDocs - 1 - idx) * 2.5;
+    const x = Math.sin(t * Math.PI * 1.5) * 1.5;
+    const z = Math.cos(t * Math.PI * 1.5) * 0.8;
+    return new THREE.Vector3(x, y, z);
+  };
+
+  const points = React.useMemo(() => {
+    const pts = [];
+    const segments = Math.max(total * 10, 50);
+
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const idx = t * (total - 1);
+      const y = (total - 1 - idx) * 2.5;
+      const x = Math.sin(t * Math.PI * 1.5) * 1.5;
+      const z = Math.cos(t * Math.PI * 1.5) * 0.8;
+      pts.push(new THREE.Vector3(x, y, z - 0.3));
+    }
+
+    return pts;
+  }, [total]);
 
   useFrame(() => {
-    if (!meshRef.current) return;
+    if (!curveRef.current) return;
     const normalizedScroll = scrollY / (total * 120);
-    meshRef.current.position.y = ((total - 1) * 2.5) / 2 - normalizedScroll * (total * 2.5);
+    curveRef.current.position.y = -normalizedScroll * (total * 2.5);
   });
 
   return (
-    <group position={[0, 0, -1]}>
-      <mesh ref={meshRef} position={[0, ((total - 1) * 2.5) / 2, 0]}>
-        <cylinderGeometry args={[0.02, 0.02, spineHeight, 32]} />
-        <meshStandardMaterial
+    <group>
+      <line ref={curveRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={points.length}
+            array={new Float32Array(points.flatMap(p => [p.x, p.y, p.z]))}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial
           color="#6366F1"
-          emissive="#6366F1"
-          emissiveIntensity={0.3}
+          linewidth={2}
           transparent
-          opacity={0.4}
+          opacity={0.5}
         />
-      </mesh>
+      </line>
     </group>
   );
 }
@@ -171,7 +224,7 @@ function Scene({ documents, scrollY, onDocumentPress }: {
   const { camera } = useThree();
 
   React.useEffect(() => {
-    camera.position.set(0, 0, 8);
+    camera.position.set(2, 0, 8);
   }, [camera]);
 
   return (
