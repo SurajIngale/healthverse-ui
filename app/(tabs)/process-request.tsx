@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, StatusBar, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { ArrowLeft, FlaskConical, User, Stethoscope, CheckSquare, Upload, X, Eye } from 'lucide-react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
 import { useLabRequests, UploadedFile } from '../../contexts/LabRequestContext';
 import * as DocumentPicker from 'expo-document-picker';
@@ -20,6 +20,15 @@ export default function ProcessRequestScreen() {
 
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setUploadedFiles([]);
+      return () => {
+        setUploadedFiles([]);
+      };
+    }, [requestId])
+  );
 
   if (!request) {
     return (

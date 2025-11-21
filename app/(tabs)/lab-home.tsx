@@ -1,13 +1,193 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
-import { FlaskConical, Clock, CheckCircle2, Bell, Settings, Home, Search, Calendar, User, Sun, Moon, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { FlaskConical, Clock, CheckCircle2, Bell, Settings, Home, Search, Calendar, User, Sun, Moon, ChevronRight, Eye, FileText } from 'lucide-react-native';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { useRouter } from 'expo-router';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
 import { useLabRequests } from '../../contexts/LabRequestContext';
 
 type FilterType = 'pending' | 'completed' | 'all';
+
+interface SwipeableCardProps {
+  request: any;
+  index: number;
+  statusBadge: any;
+  colors: any;
+  onCardPress: (request: any) => void;
+  swipedCardId: number | null;
+  setSwipedCardId: (id: number | null) => void;
+}
+
+function SwipeableCard({
+  request,
+  index,
+  statusBadge,
+  colors,
+  onCardPress,
+  swipedCardId,
+  setSwipedCardId,
+}: SwipeableCardProps) {
+  const router = useRouter();
+  const translateX = new Animated.Value(0);
+  const isSwiped = swipedCardId === request.id;
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      if (event.translationX < 0) {
+        translateX.setValue(Math.max(event.translationX, -150));
+      }
+    })
+    .onEnd((event) => {
+      if (event.translationX < -50) {
+        Animated.spring(translateX, {
+          toValue: -150,
+          useNativeDriver: true,
+          speed: 20,
+          bounciness: 0,
+        }).start();
+        setSwipedCardId(request.id);
+      } else {
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+          speed: 20,
+          bounciness: 8,
+        }).start();
+        setSwipedCardId(null);
+      }
+    });
+
+  React.useEffect(() => {
+    if (!isSwiped && swipedCardId !== null && swipedCardId !== request.id) {
+      Animated.spring(translateX, {
+        toValue: 0,
+        useNativeDriver: true,
+        speed: 20,
+        bounciness: 8,
+      }).start();
+    }
+  }, [swipedCardId]);
+
+  const handleQuickAction = (action: 'process' | 'view' | 'details') => {
+    setSwipedCardId(null);
+    Animated.spring(translateX, {
+      toValue: 0,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 8,
+    }).start();
+
+    if (action === 'process') {
+      router.push({
+        pathname: '/process-request',
+        params: { requestId: request.id.toString() },
+      });
+    } else if (action === 'view') {
+      router.push({
+        pathname: '/view-reports',
+        params: { requestId: request.id.toString() },
+      });
+    }
+  };
+
+  return (
+    <MotiView
+      from={{ opacity: 0, translateX: -20 }}
+      animate={{ opacity: 1, translateX: 0 }}
+      transition={{ delay: 700 + index * 100, type: 'spring' }}
+      style={styles.cardWrapper}
+    >
+      <View style={styles.swipeActionsContainer}>
+        {request.status === 'pending' ? (
+          <>
+            <TouchableOpacity
+              style={[styles.swipeAction, styles.swipeActionProcess]}
+              onPress={() => handleQuickAction('process')}
+              activeOpacity={0.8}
+            >
+              <FileText size={20} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.swipeActionText}>Process</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.swipeAction, styles.swipeActionDetails]}
+              onPress={() => handleQuickAction('details')}
+              activeOpacity={0.8}
+            >
+              <Eye size={20} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.swipeActionText}>Details</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={[styles.swipeAction, styles.swipeActionView]}
+              onPress={() => handleQuickAction('view')}
+              activeOpacity={0.8}
+            >
+              <Eye size={20} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.swipeActionText}>View</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.swipeAction, styles.swipeActionDetails]}
+              onPress={() => handleQuickAction('details')}
+              activeOpacity={0.8}
+            >
+              <FileText size={20} color="#ffffff" strokeWidth={2} />
+              <Text style={styles.swipeActionText}>Details</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[{ transform: [{ translateX }] }]}>
+          <TouchableOpacity
+            onPress={() => onCardPress(request)}
+            style={[styles.testCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardContent}>
+              <View style={[
+                styles.priorityIndicator,
+                request.priority === 'high' ? styles.priorityHigh : styles.priorityNormal
+              ]} />
+
+              <View style={styles.cardMain}>
+                <View style={styles.cardTop}>
+                  <Text style={[styles.patientName, { color: colors.text }]} numberOfLines={1}>
+                    {request.patient}
+                  </Text>
+                  <ChevronRight size={20} color={colors.textTertiary} strokeWidth={2} />
+                </View>
+
+                <Text style={[styles.testName, { color: colors.textTertiary }]} numberOfLines={1}>
+                  {request.tests.join(', ')}
+                </Text>
+
+                <View style={styles.cardBottom}>
+                  <Text style={[styles.testTime, { color: colors.textSecondary }]}>
+                    {request.timestamp}
+                  </Text>
+                  <View style={[styles.statusBadge, { backgroundColor: `${statusBadge.color}20` }]}>
+                    <Text style={[styles.statusText, { color: statusBadge.color }]}>
+                      {statusBadge.label}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={[styles.doctorInfo, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {request.doctor} - {request.hospital}
+                </Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+      </GestureDetector>
+    </MotiView>
+  );
+}
 
 export default function LabHomeScreen() {
   const router = useRouter();
@@ -15,7 +195,7 @@ export default function LabHomeScreen() {
   const colors = isDark ? darkTheme : lightTheme;
   const { testRequests } = useLabRequests();
   const [activeFilter, setActiveFilter] = useState<FilterType>('pending');
-  const [expandedCard, setExpandedCard] = useState<number | null>(null);
+  const [swipedCardId, setSwipedCardId] = useState<number | null>(null);
 
   const pendingCount = testRequests.filter(r => r.status === 'pending').length;
   const completedCount = testRequests.filter(r => r.status === 'completed').length;
@@ -41,26 +221,27 @@ export default function LabHomeScreen() {
     return statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
   };
 
-  const handleProcessRequest = (request: any) => {
-    router.push({
-      pathname: '/process-request',
-      params: {
-        requestId: request.id.toString(),
-      },
-    });
-  };
+  const handleCardPress = (request: any) => {
+    if (swipedCardId === request.id) {
+      setSwipedCardId(null);
+      return;
+    }
 
-  const handleViewReports = (request: any) => {
-    router.push({
-      pathname: '/view-reports',
-      params: {
-        requestId: request.id.toString(),
-      },
-    });
-  };
-
-  const toggleCardExpansion = (id: number) => {
-    setExpandedCard(expandedCard === id ? null : id);
+    if (request.status === 'pending') {
+      router.push({
+        pathname: '/process-request',
+        params: {
+          requestId: request.id.toString(),
+        },
+      });
+    } else {
+      router.push({
+        pathname: '/view-reports',
+        params: {
+          requestId: request.id.toString(),
+        },
+      });
+    }
   };
 
   return (
@@ -157,126 +338,18 @@ export default function LabHomeScreen() {
 
           {filteredRequests.map((request, index) => {
             const statusBadge = getStatusBadge(request.status);
-            const isExpanded = expandedCard === request.id;
 
             return (
-              <MotiView
+              <SwipeableCard
                 key={request.id}
-                from={{ opacity: 0, translateX: -20 }}
-                animate={{ opacity: 1, translateX: 0 }}
-                transition={{ delay: 700 + index * 100, type: 'spring' }}
-                style={[styles.testCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}
-              >
-                <TouchableOpacity
-                  onPress={() => toggleCardExpansion(request.id)}
-                  style={styles.cardTouchable}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.testLeft}>
-                    <View style={[
-                      styles.priorityIndicator,
-                      request.priority === 'high' ? styles.priorityHigh : styles.priorityNormal
-                    ]} />
-                    <View style={styles.testInfo}>
-                      <View style={styles.nameStatusRow}>
-                        <Text style={[styles.patientName, { color: colors.text }]}>
-                          {request.patient}
-                        </Text>
-                        <View style={[styles.statusBadge, { backgroundColor: `${statusBadge.color}20` }]}>
-                          <Text style={[styles.statusEmoji]}>{statusBadge.emoji}</Text>
-                          <Text style={[styles.statusText, { color: statusBadge.color }]}>
-                            {statusBadge.label}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={[styles.testName, { color: colors.textTertiary }]}>
-                        {request.tests.join(', ')}
-                      </Text>
-                      <Text style={[styles.testTime, { color: colors.textSecondary }]}>
-                        {request.timestamp}
-                      </Text>
-
-                      {isExpanded && (
-                        <MotiView
-                          from={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          transition={{ type: 'timing', duration: 300 }}
-                          style={styles.expandedContent}
-                        >
-                          <View style={styles.expandedRow}>
-                            <Text style={[styles.expandedLabel, { color: colors.textTertiary }]}>Patient ID:</Text>
-                            <Text style={[styles.expandedValue, { color: colors.text }]}>{request.patientId}</Text>
-                          </View>
-                          <View style={styles.expandedRow}>
-                            <Text style={[styles.expandedLabel, { color: colors.textTertiary }]}>Doctor:</Text>
-                            <Text style={[styles.expandedValue, { color: colors.text }]}>{request.doctor}</Text>
-                          </View>
-                          <View style={styles.expandedRow}>
-                            <Text style={[styles.expandedLabel, { color: colors.textTertiary }]}>Hospital:</Text>
-                            <Text style={[styles.expandedValue, { color: colors.text }]}>{request.hospital}</Text>
-                          </View>
-                          <View style={styles.expandedRow}>
-                            <Text style={[styles.expandedLabel, { color: colors.textTertiary }]}>Tests:</Text>
-                            <Text style={[styles.expandedValue, { color: colors.text }]}>
-                              {request.tests.join(', ')}
-                            </Text>
-                          </View>
-                          {request.doctorNote && (
-                            <View style={styles.expandedRow}>
-                              <Text style={[styles.expandedLabel, { color: colors.textTertiary }]}>Note:</Text>
-                              <Text style={[styles.expandedValue, { color: colors.text }]}>
-                                "{request.doctorNote}"
-                              </Text>
-                            </View>
-                          )}
-                          {request.status === 'completed' && (
-                            <View style={styles.expandedRow}>
-                              <Text style={[styles.expandedLabel, { color: colors.textTertiary }]}>Reports:</Text>
-                              <Text style={[styles.expandedValue, { color: colors.text }]}>
-                                {request.uploadedFiles.length} file(s) uploaded
-                              </Text>
-                            </View>
-                          )}
-                        </MotiView>
-                      )}
-                    </View>
-                    <View style={styles.expandIcon}>
-                      {isExpanded ? (
-                        <ChevronUp size={20} color={colors.textSecondary} strokeWidth={2} />
-                      ) : (
-                        <ChevronDown size={20} color={colors.textSecondary} strokeWidth={2} />
-                      )}
-                    </View>
-                  </View>
-                </TouchableOpacity>
-
-                <View style={styles.buttonContainer}>
-                  {request.status === 'pending' ? (
-                    <TouchableOpacity
-                      style={styles.processButton}
-                      onPress={() => handleProcessRequest(request)}
-                    >
-                      <LinearGradient
-                        colors={['#f59e0b', '#d97706']}
-                        style={styles.processGradient}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      >
-                        <Text style={styles.processText}>Process Request</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.viewButton}
-                      onPress={() => handleViewReports(request)}
-                    >
-                      <View style={[styles.viewButtonInner, { backgroundColor: colors.accentLight }]}>
-                        <Text style={[styles.viewButtonText, { color: colors.accent }]}>View Reports</Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </MotiView>
+                request={request}
+                index={index}
+                statusBadge={statusBadge}
+                colors={colors}
+                onCardPress={handleCardPress}
+                swipedCardId={swipedCardId}
+                setSwipedCardId={setSwipedCardId}
+              />
             );
           })}
 
@@ -422,23 +495,61 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: '#64748b',
   },
+  cardWrapper: {
+    marginBottom: 12,
+    position: 'relative',
+  },
+  swipeActionsContainer: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingRight: 12,
+  },
+  swipeAction: {
+    width: 70,
+    height: '90%',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  swipeActionProcess: {
+    backgroundColor: '#f59e0b',
+  },
+  swipeActionView: {
+    backgroundColor: '#10b981',
+  },
+  swipeActionDetails: {
+    backgroundColor: '#3b82f6',
+  },
+  swipeActionText: {
+    fontSize: 11,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+  },
   testCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: 'rgba(59, 130, 246, 0.1)',
   },
-  cardTouchable: {
-    flex: 1,
-  },
-  testLeft: {
+  cardContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     gap: 12,
+  },
+  cardMain: {
     flex: 1,
-    marginBottom: 12,
+    gap: 6,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   priorityIndicator: {
     width: 4,
@@ -452,105 +563,42 @@ const styles = StyleSheet.create({
   priorityNormal: {
     backgroundColor: '#3b82f6',
   },
-  testInfo: {
-    flex: 1,
-  },
-  nameStatusRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 6,
-    gap: 8,
-  },
   patientName: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
+    fontSize: 17,
+    fontFamily: 'Inter-Bold',
     color: '#1e293b',
     flex: 1,
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusEmoji: {
-    fontSize: 10,
-  },
-  statusText: {
-    fontSize: 11,
-    fontFamily: 'Inter-SemiBold',
-  },
   testName: {
     fontSize: 14,
-    fontFamily: 'Inter-Regular',
+    fontFamily: 'Inter-Medium',
     color: '#94a3b8',
-    marginBottom: 4,
+  },
+  cardBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   testTime: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
     color: '#64748b',
   },
-  expandIcon: {
-    marginLeft: 8,
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
-  expandedContent: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(59, 130, 246, 0.1)',
-    gap: 8,
+  statusText: {
+    fontSize: 10,
+    fontFamily: 'Inter-Bold',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  expandedRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  expandedLabel: {
+  doctorInfo: {
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: '#94a3b8',
-    width: 80,
-  },
-  expandedValue: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: '#1e293b',
-    flex: 1,
-  },
-  buttonContainer: {
-    alignItems: 'center',
-  },
-  processButton: {
-    width: '70%',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  processGradient: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  processText: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: '#ffffff',
-  },
-  viewButton: {
-    width: '70%',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  viewButtonInner: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  viewButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter-Regular',
+    color: '#64748b',
   },
   emptyState: {
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
