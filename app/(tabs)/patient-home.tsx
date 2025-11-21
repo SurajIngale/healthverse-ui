@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { Heart, Calendar, FileText, Activity, Bell, Settings, Home, Search, User, Sun, Moon } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useTheme, lightTheme, darkTheme } from '../../contexts/ThemeContext';
 
 export default function PatientHomeScreen() {
+  const router = useRouter();
   const { isDark, toggleTheme } = useTheme();
   const colors = isDark ? darkTheme : lightTheme;
 
@@ -168,7 +170,7 @@ export default function PatientHomeScreen() {
             </View>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.navButton} activeOpacity={0.7}>
             <View style={[styles.navButtonInner, { backgroundColor: colors.navInactive }]}>
               <User size={24} color={colors.textSecondary} strokeWidth={2} />
             </View>
