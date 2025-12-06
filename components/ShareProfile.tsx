@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Share, Clipboard, Image, Acti
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { QrCode, Copy, Check, RefreshCw, Share2 } from 'lucide-react-native';
-import { useTheme, lightTheme, darkTheme } from '../contexts/ThemeContext';
+import { useTheme, lightTheme, darkTheme } from '@/modules/shared/contexts/ThemeContext';
 import { qrCodeService, QRCodeData } from '../services/QRCodeService';
 
 interface ShareProfileProps {

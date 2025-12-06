@@ -4,8 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Modal,
-  TextInput,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
@@ -24,15 +22,7 @@ interface QRScannerProps {
 export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   const { isDark } = useTheme();
   const colors = isDark ? darkTheme : lightTheme;
-  const [manualCode, setManualCode] = useState('');
   const [scanning, setScanning] = useState(false);
-
-  const handleManualSubmit = () => {
-    if (manualCode.trim()) {
-      const qrData = `https://medicalrecords.app/profile?patient_id=${manualCode.trim()}&token=mock_token`;
-      onScan(qrData);
-    }
-  };
 
   const handleSimulateScan = () => {
     setScanning(true);
@@ -54,9 +44,9 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
       ]}
     >
       <MotiView
-        from={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', damping: 15 }}
+        from={{ opacity: 0, translateY: 20 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: 'timing', duration: 300 } as any}
         style={[styles.content, { backgroundColor: colors.containerBg }]}
       >
         <View style={styles.header}>
@@ -67,7 +57,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
             onPress={onClose}
             style={[styles.closeButton, { backgroundColor: colors.cardBg }]}
           >
-            <X size={24} color={colors.text} strokeWidth={2} />
+            <X size={22} color={colors.text} strokeWidth={2} />
           </TouchableOpacity>
         </View>
 
@@ -79,9 +69,9 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         >
           {scanning ? (
             <MotiView
-              from={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', damping: 12 }}
+              from={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ type: 'timing', duration: 300 } as any}
               style={styles.successContainer}
             >
               <CheckCircle size={64} color="#10b981" strokeWidth={2} />
@@ -91,98 +81,39 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
             </MotiView>
           ) : (
             <>
-              <MotiView
-                animate={{
-                  opacity: [0.3, 1, 0.3],
-                }}
-                transition={{
-                  type: 'timing',
-                  duration: 2000,
-                  loop: true,
-                }}
-                style={styles.scanFrame}
-              >
-                <QrCode size={120} color={colors.accent} strokeWidth={1.5} />
-              </MotiView>
+              <View style={styles.scanFrame}>
+                <QrCode size={100} color={colors.accent} strokeWidth={1.5} />
+              </View>
               <Text style={[styles.scanText, { color: colors.textTertiary }]}>
                 Position QR code within frame
+              </Text>
+              <Text style={[styles.scanHint, { color: colors.textTertiary }]}>
+                Ensure the code is clear and well-lit
               </Text>
             </>
           )}
         </View>
 
-        <View style={styles.divider}>
-          <View
-            style={[styles.dividerLine, { backgroundColor: colors.cardBorder }]}
-          />
-          <Text style={[styles.dividerText, { color: colors.textTertiary }]}>
-            OR
-          </Text>
-          <View
-            style={[styles.dividerLine, { backgroundColor: colors.cardBorder }]}
-          />
-        </View>
-
-        <View style={styles.manualSection}>
-          <Text style={[styles.manualLabel, { color: colors.textSecondary }]}>
-            Enter Patient ID
-          </Text>
-          <View
-            style={[
-              styles.inputContainer,
-              {
-                backgroundColor: colors.cardBg,
-                borderColor: colors.cardBorder,
-              },
-            ]}
-          >
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              value={manualCode}
-              onChangeText={setManualCode}
-              placeholder="e.g., patient_123"
-              placeholderTextColor={colors.textTertiary}
-              returnKeyType="done"
-              onSubmitEditing={handleManualSubmit}
-            />
-          </View>
-        </View>
-
         <View style={styles.actions}>
           <TouchableOpacity
             onPress={handleSimulateScan}
+            disabled={scanning}
             style={styles.simulateButton}
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={['#6366F1', '#818CF8']}
+              colors={['#10b981', '#059669']}
               style={styles.buttonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <QrCode size={20} color="#ffffff" strokeWidth={2} />
-              <Text style={styles.buttonText}>Simulate Scan</Text>
+              <Text style={styles.buttonText}>
+                {scanning ? 'Scanning...' : 'Scan QR Code'}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleManualSubmit}
-            disabled={!manualCode.trim()}
-            style={[
-              styles.manualButton,
-              !manualCode.trim() && styles.buttonDisabled,
-            ]}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.manualButtonText, { color: colors.accent }]}>
-              Submit Manually
-            </Text>
-          </TouchableOpacity>
         </View>
-
-        <Text style={[styles.hint, { color: colors.textTertiary }]}>
-          For testing: Click "Simulate Scan" or enter "patient_123"
-        </Text>
       </MotiView>
     </View>
   );
@@ -200,6 +131,11 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: 24,
     padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   header: {
     flexDirection: 'row',
@@ -210,6 +146,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontFamily: 'Inter-Bold',
+    letterSpacing: -0.3,
   },
   closeButton: {
     width: 40,
@@ -217,24 +154,33 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.2)',
   },
   scanArea: {
-    borderRadius: 16,
-    padding: 40,
+    borderRadius: 20,
+    padding: 48,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
     borderStyle: 'dashed',
-    minHeight: 280,
+    minHeight: 300,
+    marginBottom: 24,
   },
   scanFrame: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   scanText: {
-    fontSize: 13,
+    fontSize: 15,
+    fontFamily: 'Inter-Medium',
+    marginTop: 24,
+    textAlign: 'center',
+  },
+  scanHint: {
+    fontSize: 12,
     fontFamily: 'Inter-Regular',
-    marginTop: 20,
+    marginTop: 8,
     textAlign: 'center',
   },
   successContainer: {
@@ -245,75 +191,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-    gap: 12,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-  },
-  manualSection: {
-    marginBottom: 20,
-  },
-  manualLabel: {
-    fontSize: 13,
-    fontFamily: 'Inter-SemiBold',
-    marginBottom: 8,
-  },
-  inputContainer: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-  },
-  input: {
-    fontSize: 15,
-    fontFamily: 'Inter-Regular',
-    paddingVertical: 14,
-  },
   actions: {
     gap: 12,
   },
   simulateButton: {
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   buttonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    gap: 8,
+    paddingVertical: 16,
+    gap: 10,
   },
   buttonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
-  },
-  manualButton: {
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  buttonDisabled: {
-    opacity: 0.4,
-  },
-  manualButtonText: {
-    fontSize: 15,
-    fontFamily: 'Inter-SemiBold',
-  },
-  hint: {
-    fontSize: 11,
-    fontFamily: 'Inter-Regular',
-    textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 16,
   },
 });

@@ -6,8 +6,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import Animated, { useAnimatedScrollHandler, useSharedValue, interpolate, Extrapolate } from 'react-native-reanimated';
 import { Upload, X, Layers } from 'lucide-react-native';
-import { useTheme, lightTheme, darkTheme } from '../contexts/ThemeContext';
+import { useTheme, lightTheme, darkTheme } from '@/modules/shared/contexts/ThemeContext';
 import * as THREE from 'three';
+import { BufferAttribute } from 'three';
 
 export interface Document {
   id: string;
@@ -198,7 +199,7 @@ function TimelineSpine({ total, scrollY }: { total: number; scrollY: number }) {
     <group>
       <line ref={curveRef}>
         <bufferGeometry>
-          <bufferAttribute
+          <BufferAttribute
             attach="attributes-position"
             count={points.length}
             array={new Float32Array(points.flatMap(p => [p.x, p.y, p.z]))}

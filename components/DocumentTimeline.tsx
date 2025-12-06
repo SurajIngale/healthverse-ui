@@ -11,7 +11,7 @@ import Animated, {
   Extrapolate,
 } from 'react-native-reanimated';
 import { Upload, X, Layers } from 'lucide-react-native';
-import { useTheme, lightTheme, darkTheme } from '../contexts/ThemeContext';
+import { useTheme, lightTheme, darkTheme } from '@/modules/shared/contexts/ThemeContext';
 
 export interface Document {
   id: string;

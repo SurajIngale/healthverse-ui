@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView,
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView } from 'moti';
 import { Edit2, X, Check, User, Calendar, Droplet, Phone, Mail, MapPin } from 'lucide-react-native';
-import { useTheme, lightTheme, darkTheme } from '../contexts/ThemeContext';
+import { useTheme, lightTheme, darkTheme } from '@/modules/shared/contexts/ThemeContext';
 
 interface PatientData {
   name: string;

@@ -37,6 +37,8 @@ import {
   lightTheme,
   darkTheme,
 } from '@/modules/shared/contexts/ThemeContext';
+import DoctorBottomNav from '../components/dashboard/DoctorBottomNav';
+import QRScanner from '@/modules/shared/components/QRScanner';
 
 interface DoctorData {
   id: string;
@@ -66,6 +68,7 @@ export default function DoctorProfileScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? darkTheme : lightTheme;
   const [editMode, setEditMode] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   const [doctorData, setDoctorData] = useState<DoctorData>({
     id: 'doctor_123',
@@ -131,6 +134,15 @@ export default function DoctorProfileScreen() {
 
   const handleLogout = () => {
     router.replace('/(tabs)/login');
+  };
+
+  const handleQRScan = (data: string) => {
+    setShowQRScanner(false);
+    const patientId = data.split('patient_id=')[1]?.split('&')[0] || 'patient_123';
+    router.push({
+      pathname: '/(tabs)/doctor-patient-profile',
+      params: { patientId, walkIn: 'true' },
+    });
   };
 
   const getDocumentIcon = (type: string) => {
@@ -203,6 +215,7 @@ export default function DoctorProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
+        style={{ flex: 1 }}
       >
         <MotiView
           from={{ opacity: 0, scale: 0.95 }}
@@ -552,6 +565,8 @@ export default function DoctorProfileScreen() {
         <View style={styles.spacing} />
       </ScrollView>
 
+      <DoctorBottomNav onScanPress={() => setShowQRScanner(true)} />
+
       <Modal
         visible={editMode}
         transparent
@@ -897,6 +912,18 @@ export default function DoctorProfileScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      <Modal
+        visible={showQRScanner}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowQRScanner(false)}
+      >
+        <QRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      </Modal>
     </View>
   );
 }
@@ -933,7 +960,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 40,
+    paddingBottom: 140,
   },
   card: {
     borderRadius: 20,

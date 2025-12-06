@@ -17,13 +17,9 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Eye,
+  ChevronRight,
   Filter,
   Calendar as CalendarIcon,
-  Home,
-  ClipboardList,
-  QrCode,
-  User,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -31,6 +27,8 @@ import {
   lightTheme,
   darkTheme,
 } from '@/modules/shared/contexts/ThemeContext';
+import DoctorBottomNav from '../components/dashboard/DoctorBottomNav';
+import QRScanner from '@/modules/shared/components/QRScanner';
 
 interface Appointment {
   id: string;
@@ -43,13 +41,14 @@ interface Appointment {
   status: 'pending' | 'confirmed' | 'completed';
 }
 
+type TabType = 'waiting' | 'upcoming' | 'completed';
+
 export default function DoctorAppointmentsScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const colors = isDark ? darkTheme : lightTheme;
-  const [filter, setFilter] = useState<
-    'all' | 'pending' | 'confirmed' | 'completed'
-  >('all');
+  const [activeTab, setActiveTab] = useState<TabType>('waiting');
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   const [appointments, setAppointments] = useState<Appointment[]>([
     {
@@ -114,9 +113,45 @@ export default function DoctorAppointmentsScreen() {
     },
   ]);
 
-  const filteredAppointments = appointments.filter((apt) =>
-    filter === 'all' ? true : apt.status === filter
-  );
+  // Map appointment statuses to tabs
+  const getAppointmentsByTab = (tab: TabType): Appointment[] => {
+    switch (tab) {
+      case 'waiting':
+        return appointments.filter(apt => apt.status === 'pending');
+      case 'upcoming':
+        return appointments.filter(apt => apt.status === 'confirmed');
+      case 'completed':
+        return appointments.filter(apt => apt.status === 'completed');
+      default:
+        return [];
+    }
+  };
+
+  const filteredAppointments = getAppointmentsByTab(activeTab);
+
+  const tabs = [
+    {
+      id: 'waiting' as TabType,
+      label: 'Waiting',
+      count: appointments.filter(apt => apt.status === 'pending').length,
+      color: '#f59e0b',
+      bgColor: 'rgba(245, 158, 11, 0.1)',
+    },
+    {
+      id: 'upcoming' as TabType,
+      label: 'Upcoming',
+      count: appointments.filter(apt => apt.status === 'confirmed').length,
+      color: '#6366F1',
+      bgColor: 'rgba(99, 102, 241, 0.1)',
+    },
+    {
+      id: 'completed' as TabType,
+      label: 'Completed',
+      count: appointments.filter(apt => apt.status === 'completed').length,
+      color: '#10b981',
+      bgColor: 'rgba(16, 185, 129, 0.1)',
+    },
+  ];
 
   const handleApprove = (id: string) => {
     setAppointments((prev) =>
@@ -140,6 +175,15 @@ export default function DoctorAppointmentsScreen() {
     router.push({
       pathname: '/(tabs)/doctor-patient-profile',
       params: { patientId, appointmentStatus: status },
+    });
+  };
+
+  const handleQRScan = (data: string) => {
+    setShowQRScanner(false);
+    const patientId = data.split('patient_id=')[1]?.split('&')[0] || 'patient_123';
+    router.push({
+      pathname: '/(tabs)/doctor-patient-profile',
+      params: { patientId, walkIn: 'true' },
     });
   };
 
@@ -169,26 +213,28 @@ export default function DoctorAppointmentsScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return '#f59e0b';
+        return '#f59e0b'; // Orange for Waiting
       case 'confirmed':
-        return '#10b981';
+        return '#6366F1'; // Purple for Upcoming
       case 'completed':
-        return '#6366F1';
+        return '#10b981'; // Green for Completed
       default:
         return '#94a3b8';
     }
   };
 
   const getStatusLabel = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'completed':
+        return 'Completed';
+      default:
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }
   };
-
-  const filterOptions = [
-    { value: 'all', label: 'All' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'confirmed', label: 'Confirmed' },
-    { value: 'completed', label: 'Completed' },
-  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.containerBg }]}>
@@ -222,71 +268,114 @@ export default function DoctorAppointmentsScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.filterContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterScroll}
-        >
-          {filterOptions.map((option) => (
+      {/* Modern Tabs */}
+      <View style={[styles.tabsContainer, { paddingTop: Platform.OS === 'ios' ? 8 : 8 }]}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
             <TouchableOpacity
-              key={option.value}
-              onPress={() => setFilter(option.value as any)}
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: colors.cardBg,
-                  borderColor: colors.cardBorder,
-                },
-                filter === option.value && styles.filterChipActive,
-              ]}
+              key={tab.id}
+              onPress={() => setActiveTab(tab.id)}
               activeOpacity={0.7}
+              style={styles.tabButton}
             >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  { color: colors.text },
-                  filter === option.value && styles.filterChipTextActive,
-                ]}
-              >
-                {option.label}
-              </Text>
+              <View style={styles.tabContent}>
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    {
+                      color: isActive ? tab.color : colors.textSecondary,
+                      fontWeight: isActive ? '700' : '500',
+                    },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+                <View
+                  style={[
+                    styles.tabBadge,
+                    {
+                      backgroundColor: isActive ? tab.bgColor : 'transparent',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabBadgeText,
+                      {
+                        color: isActive ? tab.color : colors.textTertiary,
+                      },
+                    ]}
+                  >
+                    {tab.count}
+                  </Text>
+                </View>
+              </View>
+              {isActive && (
+                <MotiView
+                  from={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{
+                    type: 'spring',
+                    damping: 15,
+                    stiffness: 200,
+                  }}
+                  style={[
+                    styles.activeIndicator,
+                    { backgroundColor: tab.color },
+                  ]}
+                />
+              )}
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+          );
+        })}
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
       >
-        {filteredAppointments.length === 0 ? (
-          <View
-            style={[
-              styles.emptyState,
-              {
-                backgroundColor: colors.cardBg,
-                borderColor: colors.cardBorder,
-              },
-            ]}
-          >
-            <Filter size={48} color={colors.textTertiary} strokeWidth={1.5} />
-            <Text style={[styles.emptyText, { color: colors.text }]}>
-              No appointments found
-            </Text>
-            <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
-              Try changing the filter
-            </Text>
-          </View>
-        ) : (
-          filteredAppointments.map((appointment, index) => {
+        <MotiView
+          key={activeTab}
+          from={{ opacity: 0, translateY: 10 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: 'timing', duration: 300 }}
+        >
+          {filteredAppointments.length === 0 ? (
+            <View
+              style={[
+                styles.emptyState,
+                {
+                  backgroundColor: colors.cardBg,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
+            >
+              <Filter size={48} color={colors.textTertiary} strokeWidth={1.5} />
+              <Text style={[styles.emptyText, { color: colors.text }]}>
+                No appointments found
+              </Text>
+              <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
+                Try selecting a different tab
+              </Text>
+            </View>
+          ) : (
+            filteredAppointments.map((appointment, index) => {
             const statusColor = getStatusColor(appointment.status);
             const isPending = appointment.status === 'pending';
             const isConfirmed = appointment.status === 'confirmed';
 
             return (
-              <View
+              <TouchableOpacity
                 key={appointment.id}
+                onPress={() =>
+                  handleViewPatient(
+                    appointment.patientId,
+                    appointment.status
+                  )
+                }
+                activeOpacity={0.7}
                 style={[
                   styles.appointmentCard,
                   {
@@ -325,21 +414,39 @@ export default function DoctorAppointmentsScreen() {
                     </View>
                   </View>
 
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: `${statusColor}15` },
-                    ]}
-                  >
+                  <View style={styles.headerRight}>
                     <View
                       style={[
-                        styles.statusDot,
-                        { backgroundColor: statusColor },
+                        styles.statusBadge,
+                        { backgroundColor: `${statusColor}15` },
                       ]}
-                    />
-                    <Text style={[styles.statusText, { color: statusColor }]}>
-                      {getStatusLabel(appointment.status)}
-                    </Text>
+                    >
+                      <View
+                        style={[
+                          styles.statusDot,
+                          { backgroundColor: statusColor },
+                        ]}
+                      />
+                      <Text style={[styles.statusText, { color: statusColor }]}>
+                        {getStatusLabel(appointment.status)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() =>
+                        handleViewPatient(
+                          appointment.patientId,
+                          appointment.status
+                        )
+                      }
+                      style={styles.arrowButton}
+                      activeOpacity={0.7}
+                    >
+                      <ChevronRight
+                        size={20}
+                        color={colors.textTertiary}
+                        strokeWidth={2}
+                      />
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -370,28 +477,6 @@ export default function DoctorAppointmentsScreen() {
                 </View>
 
                 <View style={styles.cardActions}>
-                  <TouchableOpacity
-                    onPress={() =>
-                      handleViewPatient(
-                        appointment.patientId,
-                        appointment.status
-                      )
-                    }
-                    style={[
-                      styles.actionButton,
-                      { backgroundColor: colors.accentLight },
-                    ]}
-                  >
-                    <Eye size={16} color={colors.accent} strokeWidth={2} />
-                    <Text
-                      style={[
-                        styles.actionButtonText,
-                        { color: colors.accent },
-                      ]}
-                    >
-                      View
-                    </Text>
-                  </TouchableOpacity>
 
                   {isPending && (
                     <>
@@ -451,70 +536,14 @@ export default function DoctorAppointmentsScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })
-        )}
+          )}
+        </MotiView>
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <View
-          style={[
-            styles.navContainer,
-            {
-              backgroundColor: colors.navBg,
-              borderColor: colors.iconButtonBorder,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/doctor-home')}
-            style={styles.navButton}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.navButtonInner,
-                { backgroundColor: colors.navInactive },
-              ]}
-            >
-              <Home size={24} color={colors.textSecondary} strokeWidth={2} />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
-            <View style={[styles.navButtonInner, styles.navButtonActive]}>
-              <ClipboardList size={24} color="#ffffff" strokeWidth={2} />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.navButton} activeOpacity={0.7}>
-            <View
-              style={[
-                styles.navButtonInner,
-                { backgroundColor: colors.navInactive },
-              ]}
-            >
-              <QrCode size={24} color={colors.textSecondary} strokeWidth={2} />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)/doctor-profile')}
-            style={styles.navButton}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.navButtonInner,
-                { backgroundColor: colors.navInactive },
-              ]}
-            >
-              <User size={24} color={colors.textSecondary} strokeWidth={2} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <DoctorBottomNav onScanPress={() => setShowQRScanner(true)} />
 
       <Modal
         visible={rescheduleModal}
@@ -701,6 +730,18 @@ export default function DoctorAppointmentsScreen() {
           </MotiView>
         </View>
       </Modal>
+
+      <Modal
+        visible={showQRScanner}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowQRScanner(false)}
+      >
+        <QRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      </Modal>
     </View>
   );
 }
@@ -734,33 +775,51 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: 'Inter-Bold',
   },
-  filterContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
+  tabsContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(148, 163, 184, 0.15)',
   },
-  filterScroll: {
-    gap: 8,
+  tabButton: {
+    flex: 1,
+    position: 'relative',
+    paddingBottom: 12,
   },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
-  filterChipActive: {
-    backgroundColor: '#6366F1',
-    borderColor: '#6366F1',
-  },
-  filterChipText: {
+  tabLabel: {
     fontSize: 13,
-    fontFamily: 'Inter-Medium',
+    fontFamily: 'Inter-SemiBold',
   },
-  filterChipTextActive: {
-    color: '#ffffff',
+  tabBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    minWidth: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Inter-Bold',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: -1,
+    left: '15%',
+    right: '15%',
+    height: 3,
+    borderRadius: 2,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 120,
+    paddingHorizontal: 24,
+    paddingBottom: 140,
   },
   emptyState: {
     borderRadius: 20,
@@ -790,6 +849,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  headerRight: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  arrowButton: {
+    padding: 4,
   },
   patientInfo: {
     flexDirection: 'row',
@@ -824,10 +891,10 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    gap: 5,
   },
   statusDot: {
     width: 6,
@@ -841,6 +908,7 @@ const styles = StyleSheet.create({
   appointmentMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 12,
   },
@@ -881,45 +949,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 12,
     fontFamily: 'Inter-SemiBold',
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 24,
-    left: 24,
-    right: 24,
-    alignItems: 'center',
-  },
-  navContainer: {
-    flexDirection: 'row',
-    borderRadius: 28,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-    borderWidth: 1,
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 16,
-  },
-  navButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navButtonInner: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navButtonActive: {
-    backgroundColor: '#10b981',
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
   },
   modalOverlay: {
     flex: 1,
